@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yarn Count Converter</title>
+<meta name="description" content="Yarn count conversion and twist calculation — offline">
+<meta name="theme-color" content="#1f4e79">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Count Converter">
+<style>
+  :root{
+    --bg:#eef2f6; --card:#ffffff; --ink:#1b2430; --muted:#5d6b7a; --line:#d9e1ea;
+    --brand:#1f4e79; --brand-ink:#ffffff; --accent:#e8f0f7; --soft:#2e7d32; --hard:#b23c17;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#11161c; --card:#1a222b; --ink:#e6edf3; --muted:#9aa8b6; --line:#2c3743;
+      --brand:#3b7dc0; --brand-ink:#ffffff; --accent:#1f2a36; --soft:#6cc070; --hard:#ef8a64; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",Tahoma,sans-serif;
+    -webkit-text-size-adjust:100%}
+  header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+  header img{width:34px;height:34px;border-radius:8px;background:#fff}
+  header h1{font-size:17px;margin:0;flex:1;line-height:1.2}
+  header button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.35);
+    border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+  main{max-width:640px;margin:0 auto;padding:12px 16px calc(24px + env(safe-area-inset-bottom))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .card h2{font-size:15px;margin:0 0 10px;color:var(--brand)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+  input,select{width:100%;font-size:17px;padding:10px;border:1px solid var(--line);border-radius:10px;
+    background:var(--bg);color:var(--ink);direction:ltr;text-align:left}
+  input:focus,select:focus{outline:2px solid var(--brand);outline-offset:0}
+  .res{list-style:none;margin:0;padding:0}
+  .res li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .res li:last-child{border-bottom:0}
+  .res .k{color:var(--muted)}
+  .res .v{font-weight:600;direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
+  .head{background:var(--accent);border-radius:10px;padding:10px;font-size:14px;margin-bottom:8px;direction:ltr;text-align:left}
+  table{width:100%;border-collapse:collapse;font-size:14px;direction:ltr}
+  th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  td{white-space:pre-line;line-height:1.35}
+  td.lbl{text-align:left;font-weight:600}
+  .soft{color:var(--soft)} .hard{color:var(--hard)}
+  .note{font-size:12px;color:var(--muted);margin-top:8px;direction:ltr;text-align:left}
+  .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px;direction:ltr}
+  .seg button{flex:1;padding:10px;font-size:15px;border:0;background:var(--bg);color:var(--ink);cursor:pointer}
+  .seg button.on{background:var(--brand);color:#fff}
+  .big{font-size:22px;font-weight:700;direction:ltr;text-align:left;padding:8px 2px;min-height:40px}
+  .err{color:var(--hard);font-size:13px;min-height:18px;margin-top:6px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:8px}
+  .off{display:none;background:#fff4d6;color:#6b4e00;font-size:12px;text-align:center;padding:4px}
+  body.offline .off{display:block}
+  [dir=ltr] .res .v,[dir=ltr] input{text-align:left}
+</style>
+</head>
+<body>
+<header>
+  <img src="icon-192.png" alt="">
+  <h1 data-t="title"></h1>
+  <button id="btnManual" data-t="manual"></button>
+  <button id="btnLang">EN</button>
+</header>
+<div class="off" data-t="offline"></div>
+<main>
+  <section class="card">
+    <h2 data-t="count"></h2>
+    <div class="grid">
+      <div><label for="txtValue" data-t="value"></label><input id="txtValue" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+      <div><label for="txtPly" data-t="ply"></label><input id="txtPly" inputmode="numeric" autocomplete="off" value="1"></div>
+      <div><label for="cmbFrom" data-t="from"></label><select id="cmbFrom"></select></div>
+      <div><label for="cmbTo" data-t="to"></label><select id="cmbTo"></select></div>
+    </div>
+    <div class="err" id="err"></div>
+  </section>
+
+  <section class="card">
+    <h2 data-t="fibers"></h2>
+    <div class="grid">
+      <div><label for="cmbFromFiber" data-t="fromFiber"></label><select id="cmbFromFiber"></select></div>
+      <div><label for="cmbToFiber" data-t="toFiber"></label><select id="cmbToFiber"></select></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 data-t="results"></h2>
+    <div class="head" id="rTitle">—</div>
+    <ul class="res">
+      <li><span class="k" data-t="rReal"></span><span class="v" id="rReal">—</span></li>
+      <li><span class="k" data-t="rPly"></span><span class="v" id="rPly">—</span></li>
+      <li><span class="k" data-t="rDens"></span><span class="v" id="rDens">—</span></li>
+      <li><span class="k" data-t="rWeight"></span><span class="v" id="rWeight">—</span></li>
+      <li><span class="k" data-t="rSoftDia"></span><span class="v" id="rSoftDia">—</span></li>
+      <li><span class="k" data-t="rHardDia"></span><span class="v" id="rHardDia">—</span></li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2 data-t="twistTable"></h2>
+    <div class="head" id="tTitle">—</div>
+    <table>
+      <thead><tr><th></th><th>Min</th><th>Max</th><th>Avg</th></tr></thead>
+      <tbody>
+        <tr><td class="lbl soft">Soft TF</td><td id="sTFmin">—</td><td id="sTFmax">—</td><td id="sTFavg">—</td></tr>
+        <tr><td class="lbl soft">Soft TPM</td><td id="sTPMmin">—</td><td id="sTPMmax">—</td><td id="sTPMavg">—</td></tr>
+        <tr><td class="lbl hard">Hard TF</td><td id="hTFmin">—</td><td id="hTFmax">—</td><td id="hTFavg">—</td></tr>
+        <tr><td class="lbl hard">Hard TPM</td><td id="hTPMmin">—</td><td id="hTPMmax">—</td><td id="hTPMavg">—</td></tr>
+      </tbody>
+    </table>
+    <div class="note" id="tNote"></div>
+  </section>
+
+  <section class="card">
+    <h2 data-t="twistCalc"></h2>
+    <div class="seg" role="radiogroup">
+      <button id="modeTpm" class="on" role="radio" aria-checked="true">TPM → TF</button>
+      <button id="modeTf" role="radio" aria-checked="false">TF → TPM</button>
+    </div>
+    <label for="txtTwist" id="lblTwist">Enter Tpm =</label>
+    <input id="txtTwist" inputmode="decimal" autocomplete="off" value="0">
+    <label style="margin-top:10px" id="lblTwistRes">Result Tf =</label>
+    <div class="big" id="twistRes">—</div>
+  </section>
+
+  <footer>By Eng. Amin Edris 2025 · <span id="ver"></span></footer>
+</main>
+
+<script>
+"use strict";
+const APP_VERSION = "1.0.0";
+
+/* ---------- texts ---------- */
+const T = {
+  ar:{title:"محوّل النمر والبرم",manual:"الدليل",count:"النمرة",value:"النمرة المراد تحويلها",ply:"عدد الطاقات (Ply)",
+      from:"من نظام",to:"إلى نظام",fibers:"مراعاة اختلاف كثافة الألياف",fromFiber:"من خامة",toFiber:"إلى خامة",
+      results:"النتائج",rReal:"النمرة المحوّلة (طاقة واحدة)",rPly:"النمرة المحوّلة بعدد الطاقات",
+      rDens:"النمرة المكافئة بنفس القطر للخامة الجديدة",rWeight:"وزن المتر",rSoftDia:"القطر – برم خفيف (Soft)",
+      rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم حسب نمرة الإدخال",twistCalc:"حاسبة البرم",
+      offline:"أنت تعمل بدون إنترنت — التطبيق يعمل بشكل طبيعي",errCount:"أدخل النمرة المراد تحويلها",errPly:"عدد الطاقات يجب أن يكون 1 على الأقل",
+      noManual:"تعذّر فتح الدليل"},
+  en:{title:"Yarn Count Converter",manual:"Read me",count:"Count",value:"Convert from",ply:"Ply (1 = single)",
+      from:"From count",to:"To count",fibers:"Considering different fiber densities",fromFiber:"From fiber",toFiber:"To fiber",
+      results:"Results",rReal:"Converted (1-ply)",rPly:"Converted (with ply)",
+      rDens:"Matching diameter in new fiber",rWeight:"Weight of one meter",rSoftDia:"Soft twist diameter",
+      rHardDia:"Hard twist diameter",twistTable:"Twist according to input count",twistCalc:"Twist calculator",
+      offline:"You are offline — the app works normally",errCount:"Enter count to convert",errPly:"Ply must be at least 1.",
+      noManual:"Cannot open the manual"}
+};
+let lang = "ar";
+try { lang = localStorage.getItem("lang") || "ar"; } catch(e){}
+
+/* ---------- .NET-style Math.Round (banker's rounding) ---------- */
+function round(x, d){
+  d = d || 0;
+  const m = Math.pow(10, d), v = x * m, f = Math.floor(v), diff = v - f;
+  let r;
+  if (Math.abs(diff - 0.5) < 1e-9) r = (f % 2 === 0) ? f : f + 1;
+  else r = Math.round(v);
+  return r / m;
+}
+const fmt = n => (Number.isFinite(n) ? String(+n.toFixed(10)) : "—");
+
+/* ---------- conversion logic (ported from Form1.vb) ---------- */
+const UNITS  = ["Ne","Nm","Tex","Denier","DTEX","lb","Le"];
+const FIBERS = ["PolyProp","Cotton","Wool","Polyester","Acrylic","Nylon","Jute","Linen","Rayon","Silk"];
+
+function convertToTex(v, unit){
+  switch(unit.toLowerCase()){
+    case "ne": return 590.5 / v;
+    case "nm": return 1000 / v;
+    case "tex": return v;
+    case "denier": return v / 9;
+    case "dtex": return v / 10;
+    case "le": return (453.592 * 1000) / (v * 274.32);   // lea: 300 yd per lb
+    case "lb": return (v * 453.592) / 13.16576;          // jute: lb per 14400 yd
+  }
+  throw new Error("Unknown unit");
+}
+function convertFromTex(tex, unit){
+  switch(unit.toLowerCase()){
+    case "ne": return 590.5 / tex;
+    case "nm": return 1000 / tex;
+    case "tex": return tex;
+    case "denier": return tex * 9;
+    case "dtex": return tex * 10;
+    case "le": return (453.592 * 1000) / (tex * 274.32);
+    case "lb": return (tex * 13.16576) / 453.592;
+  }
+  throw new Error("Unknown unit");
+}
+function fiberDensity(f){
+  return ({cotton:1.54,wool:1.32,polyester:1.38,acrylic:1.17,nylon:1.14,jute:1.48,linen:1.5,rayon:1.5,silk:1.34,polyprop:0.91})[f.toLowerCase()] || 1.0;
+}
+function yarnDiameterMM(tex, density){
+  if (tex <= 0 || density <= 0) return 0;
+  return Math.sqrt((4 * tex) / (Math.PI * density * 1000));
+}
+function convertToPly(count, unit, ply){
+  switch(unit.toLowerCase()){
+    case "ne": case "nm": case "le": return count * ply;      // indirect systems
+    case "tex": case "denier": case "dtex": case "lb": return count / ply; // direct systems
+  }
+  throw new Error("Unknown unit");
+}
+function packingFactor(f){
+  switch(f.toLowerCase()){
+    case "cotton": case "linen": case "rayon": return [0.65,0.85];
+    case "wool": return [0.55,0.7];
+    case "polyester": case "silk": return [0.68,0.82];
+    case "acrylic": case "nylon": return [0.55,0.9];
+    case "jute": return [0.8,0.9];
+    case "polyprop": return [0.65,0.8];
+  }
+  return [1,1];
+}
+
+function twistFactorAndTPM(tex, soft, fromUnit){
+  let mn = 0, mx = 0;
+  if (fromUnit === "Ne"){
+    const ne = 590.5 / tex;
+    if      (ne <= 1)  [mn,mx] = soft ? [2.8,3.8] : [4,4.5];
+    else if (ne <= 6)  [mn,mx] = soft ? [3,3.8]   : [4,4.5];
+    else if (ne <= 10) [mn,mx] = soft ? [3.2,4]   : [4.2,4.5];
+    else               [mn,mx] = soft ? [3.5,4.2] : [4.3,4.5];   // fixed: Ne > 200 previously gave 0
+    const avg = (mn+mx)/2, k = 39.37 * Math.sqrt(ne);
+    return {tfAvg:round(avg,1), tpm:round(avg*k,1), tfMin:round(mn,1), tfMax:round(mx,1), tpmMin:round(mn*k,1), tpmMax:round(mx*k,1)};
+  }
+  if (fromUnit === "Nm"){
+    const nm = 1000 / tex;
+    if      (nm <= 1)  [mn,mx] = soft ? [40,50] : [60,80];
+    else if (nm <= 6)  [mn,mx] = soft ? [50,60] : [70,85];
+    else if (nm <= 10) [mn,mx] = soft ? [60,70] : [90,110];
+    else               [mn,mx] = soft ? [75,85] : [100,120];     // fixed: Nm > 200 previously gave 0
+    const avg = (mn+mx)/2, k = Math.sqrt(nm);
+    return {tfAvg:round(avg,2), tpm:round(avg*k,2), tfMin:round(mn,2), tfMax:round(mx,2), tpmMin:round(mn*k,2), tpmMax:round(mx*k,2)};
+  }
+  const tbl = [ // [upper tex, softMin, softMax, hardMin, hardMax]
+    [20,12,20,22,30],[50,10,14,15,25],[100,7,14,15,25],[200,8,11,15,25],[300,7,13,14,25],
+    [400,7,12,12,25],[500,7,10,12,25],[600,7,8,12,25],[700,7,8,12,25],[1000,7,8,12,24],
+    [1200,7,8,12,24],[1400,6,8,10,20],[1600,6,8,10,20],[Infinity,6,8,10,20] // fixed: 1600–1800 previously gave 0
+  ];
+  const row = tbl.find(r => tex <= r[0]);
+  [mn,mx] = soft ? [row[1],row[2]] : [row[3],row[4]];
+  const avg = (mn+mx)/2, s = Math.sqrt(tex);
+  return {tfAvg:round(avg,2), tpm:round(avg*100/s,2), tfMin:round(mn,2), tfMax:round(mx,2), tpmMin:round(mn*100/s,2), tpmMax:round(mx*100/s,2)};
+}
+
+function twistSpecial(tex, fromUnit, tfMode, input){
+  if (fromUnit === "Ne"){
+    const ne = 590.5 / tex;
+    return tfMode ? round(input*39.37*Math.sqrt(ne),1) : round(input/(39.37*Math.sqrt(ne)),1);
+  }
+  if (fromUnit === "Nm"){
+    const nm = 1000 / tex;
+    return tfMode ? round(input*Math.sqrt(nm),1) : round(input/Math.sqrt(nm),1);
+  }
+  return tfMode ? round(input*100/Math.sqrt(tex),0) : round(input*Math.sqrt(tex)/100,0);
+}
+
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+function fill(sel, items, idx){ sel.innerHTML = items.map(i=>`<option>${i}</option>`).join(""); sel.selectedIndex = idx; }
+fill($("cmbFrom"), UNITS, 4); fill($("cmbTo"), UNITS, 3);
+fill($("cmbFromFiber"), FIBERS, 0); fill($("cmbToFiber"), FIBERS, 0);
+let tfMode = false;
+
+function num(s){
+  s = String(s).trim().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, ".");
+  return s === "" ? NaN : Number(s);
+}
+function tIn(tpm, d){ return `${fmt(tpm)}\n${fmt(round(tpm/39.37, d))} T/in`; }
+
+function clearOut(){
+  ["rReal","rPly","rDens","rWeight","rSoftDia","rHardDia","sTFmin","sTFmax","sTFavg","sTPMmin","sTPMmax","sTPMavg",
+   "hTFmin","hTFmax","hTFavg","hTPMmin","hTPMmax","hTPMavg","twistRes"].forEach(id => $(id).textContent = "—");
+  $("rTitle").textContent = "—"; $("tTitle").textContent = "—"; $("tNote").textContent = "";
+}
+
+function compute(){
+  const L = T[lang];
+  const v = num($("txtValue").value), ply = num($("txtPly").value);
+  $("err").textContent = "";
+  if (!Number.isFinite(v) || v <= 0){ clearOut(); if ($("txtValue").value.trim() !== "" && $("txtValue").value.trim() !== "0") $("err").textContent = L.errCount; return; }
+  if (!Number.isInteger(ply) || ply < 1){ clearOut(); $("err").textContent = L.errPly; return; }
+
+  const from = $("cmbFrom").value, to = $("cmbTo").value;
+  const fFib = $("cmbFromFiber").value, tFib = $("cmbToFiber").value;
+
+  const texSingle = convertToTex(v, from);
+  const texTotal  = texSingle * ply;
+  const result2   = convertFromTex(texTotal, to);
+  const dFrom = fiberDensity(fFib), dTo = fiberDensity(tFib);
+  const correctedTex = texTotal * (dTo / dFrom);
+  const plyC   = convertToPly(result2, to, ply);
+  const result = convertFromTex(correctedTex, to);
+
+  $("rTitle").textContent = `${fmt(v)}/${ply} ${from}, ${fFib}  →  ${to}`;
+  $("rReal").textContent  = `${fmt(round(result2,1))}/1 ${to}`;
+  $("rPly").textContent   = `${fmt(round(plyC,1))}/${ply} ${to}`;
+  $("rDens").textContent  = `${fmt(round(result,1))}/1 ${to}, ${tFib}`;
+  $("rWeight").textContent= `${fmt(round(texTotal/1000,3))} g/m`;
+
+  const dia = yarnDiameterMM(texTotal, dFrom), pf = packingFactor(fFib);
+  $("rSoftDia").textContent = `${fmt(round(dia/pf[0],4))} mm`;
+  $("rHardDia").textContent = `${fmt(round(dia/pf[1],4))} mm`;
+
+  const s = twistFactorAndTPM(texSingle, true, from), h = twistFactorAndTPM(texSingle, false, from);
+  $("tTitle").textContent = `${fmt(v)}/1 ${from}`;
+  $("sTFmin").textContent = fmt(s.tfMin); $("sTFmax").textContent = fmt(s.tfMax); $("sTFavg").textContent = fmt(s.tfAvg);
+  $("hTFmin").textContent = fmt(h.tfMin); $("hTFmax").textContent = fmt(h.tfMax); $("hTFavg").textContent = fmt(h.tfAvg);
+  if (from === "Ne"){
+    $("sTPMmin").textContent = tIn(s.tpmMin,0); $("sTPMmax").textContent = tIn(s.tpmMax,0); $("sTPMavg").textContent = tIn(s.tpm,0);
+    $("hTPMmin").textContent = tIn(h.tpmMin,0); $("hTPMmax").textContent = tIn(h.tpmMax,0); $("hTPMavg").textContent = tIn(h.tpm,0);
+  } else {
+    $("sTPMmin").textContent = fmt(s.tpmMin); $("sTPMmax").textContent = fmt(s.tpmMax); $("sTPMavg").textContent = fmt(s.tpm);
+    $("hTPMmin").textContent = fmt(h.tpmMin); $("hTPMmax").textContent = fmt(h.tpmMax); $("hTPMavg").textContent = fmt(h.tpm);
+  }
+  $("tNote").textContent = from === "Ne" ? "Cotton system: Turns/inch = TPM / 39.37 — twist factor from 2.8 to 4.5"
+                        : from === "Nm" ? "Wool system: twist factor from 60 to 120"
+                        : "Tex system: twist factor from 8 to 40";
+
+  const tw = num($("txtTwist").value);
+  if (!Number.isFinite(tw) || tw === 0){ $("twistRes").textContent = "—"; }
+  else {
+    const r = twistSpecial(texSingle, from, tfMode, tw);
+    $("twistRes").textContent = (from === "Ne" && tfMode) ? `${fmt(r)}  (${fmt(round(r/39.37,1))} T/in)` : fmt(r);
+  }
+}
+
+function setMode(tf){
+  tfMode = tf;
+  $("modeTf").classList.toggle("on", tf);  $("modeTf").setAttribute("aria-checked", tf);
+  $("modeTpm").classList.toggle("on", !tf); $("modeTpm").setAttribute("aria-checked", !tf);
+  $("lblTwist").textContent    = tf ? "Enter Tf =" : "Enter Tpm =";
+  $("lblTwistRes").textContent = tf ? "Result Tpm =" : "Result Tf =";
+  compute();
+}
+
+function applyLang(){
+  const L = T[lang];
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = L[el.dataset.t]);
+  $("btnLang").textContent = lang === "ar" ? "EN" : "ع";
+  document.title = L.title;
+  compute();
+}
+
+["txtValue","txtPly","txtTwist"].forEach(id => $(id).addEventListener("input", compute));
+["cmbFrom","cmbTo","cmbFromFiber","cmbToFiber"].forEach(id => $(id).addEventListener("change", compute));
+$("txtValue").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("txtPly").focus(); }});
+$("txtPly").addEventListener("blur", () => { if ($("txtPly").value.trim() === "" || num($("txtPly").value) === 0){ $("txtPly").value = "1"; compute(); }});
+$("modeTf").addEventListener("click", () => setMode(true));
+$("modeTpm").addEventListener("click", () => setMode(false));
+$("btnLang").addEventListener("click", () => { lang = lang === "ar" ? "en" : "ar"; try{ localStorage.setItem("lang", lang); }catch(e){} applyLang(); });
+$("btnManual").addEventListener("click", () => { window.open("manual.pdf", "_blank"); });
+$("ver").textContent = "v" + APP_VERSION;
+
+function netState(){ document.body.classList.toggle("offline", !navigator.onLine); }
+addEventListener("online", netState); addEventListener("offline", netState); netState();
+
+applyLang();
+
+/* ---------- offline support ---------- */
+if ("serviceWorker" in navigator){
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+
+/* expose for tests */
+window.__calc = {convertToTex, convertFromTex, twistFactorAndTPM, twistSpecial, round};
+</script>
+</body>
+</html>
