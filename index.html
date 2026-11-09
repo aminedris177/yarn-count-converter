@@ -62,17 +62,34 @@
   .off{display:none;background:#fff4d6;color:#6b4e00;font-size:12px;text-align:center;padding:4px}
   body.offline .off{display:block}
   [dir=ltr] .res .v,[dir=ltr] input{text-align:left}
+  /* install helper */
+  .inst{background:var(--card);border:2px solid var(--brand);border-radius:14px;padding:14px;margin-bottom:12px}
+  .inst h2{margin:0 0 6px;font-size:16px;color:var(--brand)}
+  .inst p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+  .inst ol{margin:0 0 10px;padding-inline-start:22px;font-size:15px;line-height:1.9}
+  .inst .ic{display:inline-flex;vertical-align:middle;width:26px;height:26px;border-radius:6px;background:var(--accent);
+    align-items:center;justify-content:center;margin:0 3px}
+  .inst .ic svg{width:18px;height:18px;stroke:var(--brand);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .inst .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{border:0;border-radius:10px;padding:11px 16px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.pri{background:var(--brand);color:#fff;flex:1}
+  .btn.sec{background:var(--accent);color:var(--ink)}
+  .warn{background:#fff4d6;color:#6b4e00;border-radius:10px;padding:10px;font-size:14px;margin-bottom:10px}
+  body.standalone .inst, body.standalone #btnInstall{display:none!important}
+  #btnInstall{display:none}
 </style>
 </head>
 <body>
 <header>
   <img src="icon-192.png" alt="">
   <h1 data-t="title"></h1>
+  <button id="btnInstall" data-t="install"></button>
   <button id="btnManual" data-t="manual"></button>
   <button id="btnLang">EN</button>
 </header>
 <div class="off" data-t="offline"></div>
 <main>
+  <section class="inst" id="instCard" hidden></section>
   <section class="card">
     <h2 data-t="count"></h2>
     <div class="grid">
@@ -132,12 +149,12 @@
     <div class="big" id="twistRes">—</div>
   </section>
 
-  <footer>By Eng. Amin Edris 2025 · <span id="ver"></span></footer>
+  <footer><button class="btn sec" id="btnShare" data-t="share"></button><br><br>By Eng. Amin Edris 2025 · <span id="ver"></span></footer>
 </main>
 
 <script>
 "use strict";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 
 /* ---------- texts ---------- */
 const T = {
@@ -147,14 +164,28 @@ const T = {
       rDens:"النمرة المكافئة بنفس القطر للخامة الجديدة",rWeight:"وزن المتر",rSoftDia:"القطر – برم خفيف (Soft)",
       rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم حسب نمرة الإدخال",twistCalc:"حاسبة البرم",
       offline:"أنت تعمل بدون إنترنت — التطبيق يعمل بشكل طبيعي",errCount:"أدخل النمرة المراد تحويلها",errPly:"عدد الطاقات يجب أن يكون 1 على الأقل",
-      noManual:"تعذّر فتح الدليل"},
+      noManual:"تعذّر فتح الدليل",install:"تثبيت",share:"مشاركة رابط التطبيق",copied:"تم نسخ الرابط",
+      iTitle:"ثبّت التطبيق على موبايلك",iSub:"مرة واحدة بس — بعدها يفتح من الأيقونة ويشتغل من غير نت.",
+      iBtn:"ثبّت الآن",later:"لاحقاً",done:"تمام",
+      aSteps:["اضغط على <b>⋮</b> فوق على اليمين في Chrome","اختار <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b>","اضغط <b>تثبيت</b>"],
+      iosSteps:["اضغط زرار المشاركة {share} تحت في Safari","انزل واختار <b>إضافة إلى الشاشة الرئيسية</b> {add}","اضغط <b>إضافة</b> فوق على اليمين"],
+      inApp:"إنت فاتح اللينك من جوه تطبيق تاني (واتساب/فيسبوك). افتحه في {b} الأول عشان تقدر تثبّته.",
+      inAppIOS:"اضغط على ⋯ أو أيقونة البوصلة واختار <b>Open in Safari</b>.",
+      inAppAnd:"اضغط على ⋮ واختار <b>Open in Chrome</b>."},
   en:{title:"Yarn Count Converter",manual:"Read me",count:"Count",value:"Convert from",ply:"Ply (1 = single)",
       from:"From count",to:"To count",fibers:"Considering different fiber densities",fromFiber:"From fiber",toFiber:"To fiber",
       results:"Results",rReal:"Converted (1-ply)",rPly:"Converted (with ply)",
       rDens:"Matching diameter in new fiber",rWeight:"Weight of one meter",rSoftDia:"Soft twist diameter",
       rHardDia:"Hard twist diameter",twistTable:"Twist according to input count",twistCalc:"Twist calculator",
       offline:"You are offline — the app works normally",errCount:"Enter count to convert",errPly:"Ply must be at least 1.",
-      noManual:"Cannot open the manual"}
+      noManual:"Cannot open the manual",install:"Install",share:"Share app link",copied:"Link copied",
+      iTitle:"Install the app on your phone",iSub:"One time only — then it opens from its icon and works offline.",
+      iBtn:"Install now",later:"Later",done:"OK",
+      aSteps:["Tap <b>⋮</b> at the top right in Chrome","Choose <b>Install app</b> or <b>Add to Home screen</b>","Tap <b>Install</b>"],
+      iosSteps:["Tap the Share button {share} in Safari","Scroll and choose <b>Add to Home Screen</b> {add}","Tap <b>Add</b> at the top right"],
+      inApp:"You opened this link inside another app (WhatsApp/Facebook). Open it in {b} first to install.",
+      inAppIOS:"Tap ⋯ or the compass icon and choose <b>Open in Safari</b>.",
+      inAppAnd:"Tap ⋮ and choose <b>Open in Chrome</b>."}
 };
 let lang = "ar";
 try { lang = localStorage.getItem("lang") || "ar"; } catch(e){}
@@ -353,6 +384,7 @@ function applyLang(){
   document.querySelectorAll("[data-t]").forEach(el => el.textContent = L[el.dataset.t]);
   $("btnLang").textContent = lang === "ar" ? "EN" : "ع";
   document.title = L.title;
+  if (window.__instReady) renderInstall();
   compute();
 }
 
@@ -371,10 +403,63 @@ addEventListener("online", netState); addEventListener("offline", netState); net
 
 applyLang();
 
+/* ---------- install helper (Android + iPhone) ---------- */
+const UA = navigator.userAgent;
+const isIOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(UA);
+const isInApp = /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Snapchat|TikTok|; wv\)/.test(UA);
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const SVG_SHARE = '<span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span>';
+const SVG_ADD   = '<span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>';
+let deferredPrompt = null, instDismissed = false;
+try { instDismissed = sessionStorage.getItem("instLater") === "1"; } catch(e){}
+
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt = e; renderInstall(); });
+addEventListener("appinstalled", () => { deferredPrompt = null; $("instCard").hidden = true; $("btnInstall").style.display = "none"; });
+
+function renderInstall(force){
+  const L = T[lang], card = $("instCard");
+  if (isStandalone()){ document.body.classList.add("standalone"); card.hidden = true; return; }
+  const mobile = isIOS || isAndroid;
+  $("btnInstall").style.display = (mobile || deferredPrompt) ? "inline-block" : "none";
+  if ((instDismissed && !force) || !(mobile || deferredPrompt)){ card.hidden = true; return; }
+  let body = "";
+  if (isInApp){
+    body = `<div class="warn">${L.inApp.replace("{b}", isIOS ? "Safari" : "Chrome")}<br>${isIOS ? L.inAppIOS : L.inAppAnd}</div>`;
+  } else if (deferredPrompt){
+    body = `<div class="row"><button class="btn pri" id="instGo">${L.iBtn}</button><button class="btn sec" id="instLater">${L.later}</button></div>`;
+  } else {
+    const steps = isIOS ? L.iosSteps : L.aSteps;
+    body = `<ol>${steps.map(x => `<li>${x.replace("{share}", SVG_SHARE).replace("{add}", SVG_ADD)}</li>`).join("")}</ol>
+            <div class="row"><button class="btn sec" id="instLater">${L.done}</button></div>`;
+  }
+  card.innerHTML = `<h2>${L.iTitle}</h2><p>${L.iSub}</p>${body}`;
+  card.hidden = false;
+  const go = $("instGo");
+  if (go) go.onclick = async () => { deferredPrompt.prompt(); const r = await deferredPrompt.userChoice; deferredPrompt = null; if (r.outcome === "accepted") card.hidden = true; else renderInstall(true); };
+  const later = $("instLater");
+  if (later) later.onclick = () => { card.hidden = true; instDismissed = true; try{ sessionStorage.setItem("instLater","1"); }catch(e){} };
+}
+$("btnInstall").addEventListener("click", () => {
+  if (deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { deferredPrompt = null; renderInstall(true); }); }
+  else { renderInstall(true); scrollTo({top:0, behavior:"smooth"}); }
+});
+$("btnShare").addEventListener("click", async () => {
+  const url = new URL("./", location.href).href;
+  try {
+    if (navigator.share) await navigator.share({title: T[lang].title, url});
+    else { await navigator.clipboard.writeText(url); alert(T[lang].copied); }
+  } catch(e){}
+});
+matchMedia("(display-mode: standalone)").addEventListener?.("change", () => renderInstall());
+
 /* ---------- offline support ---------- */
 if ("serviceWorker" in navigator){
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
+
+window.__instReady = true;
+renderInstall();
 
 /* expose for tests */
 window.__calc = {convertToTex, convertFromTex, twistFactorAndTPM, twistSpecial, round};
