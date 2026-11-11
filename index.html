@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Yarn Count Converter</title>
 <meta name="description" content="Yarn count conversion and twist calculation — offline">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://aminedris177.github.io/yarn-count-converter/">
+<meta property="og:title" content="Yarn Count &amp; Twist Converter — free mobile app">
+<meta property="og:description" content="Ne, Nm, Tex, Denier, dtex, Lea, lb · ply &amp; fiber density · yarn diameter · TF ↔ TPM. Works offline on Android &amp; iPhone.">
+<meta property="og:image" content="https://aminedris177.github.io/yarn-count-converter/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#1f4e79">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -154,7 +162,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 
 /* ---------- texts ---------- */
 const T = {
@@ -162,7 +170,7 @@ const T = {
       from:"من نظام",to:"إلى نظام",fibers:"مراعاة اختلاف كثافة الألياف",fromFiber:"من خامة",toFiber:"إلى خامة",
       results:"النتائج",rReal:"النمرة المحوّلة (طاقة واحدة)",rPly:"النمرة المحوّلة بعدد الطاقات",
       rDens:"النمرة المكافئة بنفس القطر للخامة الجديدة",rWeight:"وزن المتر",rSoftDia:"القطر – برم خفيف (Soft)",
-      rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم حسب نمرة الإدخال",twistCalc:"حاسبة البرم",
+      rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم",tSingle:"على النمرة السنجل",tPly:"على النمرة النهائية (مزوي {n} طرف)",twistCalc:"حاسبة البرم",
       offline:"أنت تعمل بدون إنترنت — التطبيق يعمل بشكل طبيعي",errCount:"أدخل النمرة المراد تحويلها",errPly:"عدد الطاقات يجب أن يكون 1 على الأقل",
       noManual:"تعذّر فتح الدليل",install:"تثبيت",share:"مشاركة رابط التطبيق",copied:"تم نسخ الرابط",
       iTitle:"ثبّت التطبيق على موبايلك",iSub:"مرة واحدة بس — بعدها يفتح من الأيقونة ويشتغل من غير نت.",
@@ -176,7 +184,7 @@ const T = {
       from:"From count",to:"To count",fibers:"Considering different fiber densities",fromFiber:"From fiber",toFiber:"To fiber",
       results:"Results",rReal:"Converted (1-ply)",rPly:"Converted (with ply)",
       rDens:"Matching diameter in new fiber",rWeight:"Weight of one meter",rSoftDia:"Soft twist diameter",
-      rHardDia:"Hard twist diameter",twistTable:"Twist according to input count",twistCalc:"Twist calculator",
+      rHardDia:"Hard twist diameter",twistTable:"Twist calculations",tSingle:"on single count",tPly:"on resultant count ({n}-ply)",twistCalc:"Twist calculator",
       offline:"You are offline — the app works normally",errCount:"Enter count to convert",errPly:"Ply must be at least 1.",
       noManual:"Cannot open the manual",install:"Install",share:"Share app link",copied:"Link copied",
       iTitle:"Install the app on your phone",iSub:"One time only — then it opens from its icon and works offline.",
@@ -345,8 +353,12 @@ function compute(){
   $("rSoftDia").textContent = `${fmt(round(dia/pf[0],4))} mm`;
   $("rHardDia").textContent = `${fmt(round(dia/pf[1],4))} mm`;
 
-  const s = twistFactorAndTPM(texSingle, true, from), h = twistFactorAndTPM(texSingle, false, from);
-  $("tTitle").textContent = `${fmt(v)}/1 ${from}`;
+  // Twist basis: single yarn when ply = 1, resultant (final) count when plied
+  const twistTex = ply > 1 ? texTotal : texSingle;
+  const s = twistFactorAndTPM(twistTex, true, from), h = twistFactorAndTPM(twistTex, false, from);
+  $("tTitle").textContent = ply > 1
+    ? `${fmt(v)}/${ply} ${from} = ${fmt(round(convertFromTex(twistTex, from),2))}/1 ${from} — ${L.tPly.replace("{n}", ply)}`
+    : `${fmt(v)}/1 ${from} — ${L.tSingle}`;
   $("sTFmin").textContent = fmt(s.tfMin); $("sTFmax").textContent = fmt(s.tfMax); $("sTFavg").textContent = fmt(s.tfAvg);
   $("hTFmin").textContent = fmt(h.tfMin); $("hTFmax").textContent = fmt(h.tfMax); $("hTFavg").textContent = fmt(h.tfAvg);
   if (from === "Ne"){
@@ -363,7 +375,7 @@ function compute(){
   const tw = num($("txtTwist").value);
   if (!Number.isFinite(tw) || tw === 0){ $("twistRes").textContent = "—"; }
   else {
-    const r = twistSpecial(texSingle, from, tfMode, tw);
+    const r = twistSpecial(twistTex, from, tfMode, tw);
     $("twistRes").textContent = (from === "Ne" && tfMode) ? `${fmt(r)}  (${fmt(round(r/39.37,1))} T/in)` : fmt(r);
   }
 }
