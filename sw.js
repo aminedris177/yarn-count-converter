@@ -12,7 +12,9 @@ const FILES = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE)
+    .then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -35,7 +37,7 @@ self.addEventListener("fetch", e => {
   e.respondWith(
     caches.open(CACHE).then(async cache => {
       const cached = await cache.match(key, { ignoreSearch: true });
-      const network = fetch(req).then(res => {
+      const network = fetch(new Request(req.url, { cache: "no-cache" })).then(res => {
         if (res && res.ok) cache.put(key, res.clone());
         return res;
       }).catch(() => null);
@@ -44,4 +46,9 @@ self.addEventListener("fetch", e => {
       return res || (isPage ? cache.match("index.html") : Response.error());
     })
   );
+});
+
+// lets the page ask which version is running
+self.addEventListener("message", e => {
+  if (e.data === "GET_VERSION" && e.ports[0]) e.ports[0].postMessage(CACHE);
 });

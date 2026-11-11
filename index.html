@@ -85,6 +85,14 @@
   .warn{background:#fff4d6;color:#6b4e00;border-radius:10px;padding:10px;font-size:14px;margin-bottom:10px}
   body.standalone .inst, body.standalone #btnInstall{display:none!important}
   #btnInstall{display:none}
+  .toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:20;max-width:616px;margin:0 auto;
+    background:var(--brand);color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);
+    display:flex;gap:12px;align-items:center}
+  .toast[hidden]{display:none}
+  .toast .msg{flex:1;font-size:14px;line-height:1.5}
+  .toast .msg b{display:block;font-size:15px}
+  .toast button{border:0;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;background:#f5b544;color:#0a2240}
+  .toast button.x{background:transparent;color:#fff;font-size:20px;padding:6px 8px}
 </style>
 </head>
 <body>
@@ -157,12 +165,18 @@
     <div class="big" id="twistRes">—</div>
   </section>
 
+  <div class="toast" id="toast" hidden></div>
   <footer><button class="btn sec" id="btnShare" data-t="share"></button><br><br>By Eng. Amin Edris 2025 · <span id="ver"></span></footer>
 </main>
 
 <script>
 "use strict";
 const APP_VERSION = "1.2.0";
+/* What's new — shown once after the app updates. Add a line for every release. */
+const CHANGELOG = {
+  "1.2.0": { ar:"حسابات البرم بقت على النمرة النهائية لو الخيط مزوي، وعلى السنجل لو طرف واحد. وبقى التطبيق يبلّغك بأي تحديث جديد.",
+             en:"Twist is now calculated on the resultant count for plied yarn, and on the single count for 1-ply. The app now tells you about new updates." }
+};
 
 /* ---------- texts ---------- */
 const T = {
@@ -179,7 +193,7 @@ const T = {
       iosSteps:["اضغط زرار المشاركة {share} تحت في Safari","انزل واختار <b>إضافة إلى الشاشة الرئيسية</b> {add}","اضغط <b>إضافة</b> فوق على اليمين"],
       inApp:"إنت فاتح اللينك من جوه تطبيق تاني (واتساب/فيسبوك). افتحه في {b} الأول عشان تقدر تثبّته.",
       inAppIOS:"اضغط على ⋯ أو أيقونة البوصلة واختار <b>Open in Safari</b>.",
-      inAppAnd:"اضغط على ⋮ واختار <b>Open in Chrome</b>."},
+      inAppAnd:"اضغط على ⋮ واختار <b>Open in Chrome</b>.",updReady:"فيه تحديث جديد للتطبيق",updBtn:"حدّث الآن",updDone:"تم التحديث للنسخة {v}"},
   en:{title:"Yarn Count Converter",manual:"Read me",count:"Count",value:"Convert from",ply:"Ply (1 = single)",
       from:"From count",to:"To count",fibers:"Considering different fiber densities",fromFiber:"From fiber",toFiber:"To fiber",
       results:"Results",rReal:"Converted (1-ply)",rPly:"Converted (with ply)",
@@ -193,7 +207,7 @@ const T = {
       iosSteps:["Tap the Share button {share} in Safari","Scroll and choose <b>Add to Home Screen</b> {add}","Tap <b>Add</b> at the top right"],
       inApp:"You opened this link inside another app (WhatsApp/Facebook). Open it in {b} first to install.",
       inAppIOS:"Tap ⋯ or the compass icon and choose <b>Open in Safari</b>.",
-      inAppAnd:"Tap ⋮ and choose <b>Open in Chrome</b>."}
+      inAppAnd:"Tap ⋮ and choose <b>Open in Chrome</b>.",updReady:"A new update is available",updBtn:"Update now",updDone:"Updated to version {v}"}
 };
 let lang = "ar";
 try { lang = localStorage.getItem("lang") || "ar"; } catch(e){}
@@ -466,8 +480,49 @@ $("btnShare").addEventListener("click", async () => {
 matchMedia("(display-mode: standalone)").addEventListener?.("change", () => renderInstall());
 
 /* ---------- offline support ---------- */
+function showToast(html, btnText, onBtn){
+  const t = $("toast");
+  t.innerHTML = `<div class="msg">${html}</div>` + (btnText ? `<button id="toastBtn">${btnText}</button>` : "") + `<button class="x" id="toastX" aria-label="close">×</button>`;
+  t.hidden = false;
+  if (btnText) $("toastBtn").onclick = onBtn;
+  $("toastX").onclick = () => { t.hidden = true; };
+}
+
+/* After an update: show "Updated to vX" + what's new, once */
+(function(){
+  let last = null;
+  try { last = localStorage.getItem("appVersion"); localStorage.setItem("appVersion", APP_VERSION); } catch(e){}
+  const wasCached = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+  if (last !== APP_VERSION && (last || wasCached)){
+    const note = CHANGELOG[APP_VERSION] ? CHANGELOG[APP_VERSION][lang] : "";
+    showToast(`<b>✓ ${T[lang].updDone.replace("{v}", APP_VERSION)}</b>${note}`);
+  }
+})();
+
 if ("serviceWorker" in navigator){
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  // A new version took over in the background -> offer to load it now
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading) return;   // first install, not an update
+    // if the version that just took over is the one already on screen, there is nothing new to load
+    const sw = navigator.serviceWorker.controller;
+    if (!sw) return;
+    const ch = new MessageChannel();
+    ch.port1.onmessage = e => {
+      if (e.data === "count-converter-v" + APP_VERSION) return;
+      showToast(`<b>${T[lang].updReady}</b>`, T[lang].updBtn, () => { reloading = true; location.reload(); });
+    };
+    sw.postMessage("GET_VERSION", [ch.port2]);
+  });
+  addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      // check for updates on every launch and whenever the app comes back to the screen
+      const check = () => reg.update().catch(()=>{});
+      check();
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
+    }).catch(()=>{});
+  });
 }
 
 window.__instReady = true;
