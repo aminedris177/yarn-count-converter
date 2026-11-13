@@ -70,6 +70,16 @@
   .off{display:none;background:#fff4d6;color:#6b4e00;font-size:12px;text-align:center;padding:4px}
   body.offline .off{display:block}
   [dir=ltr] .res .v,[dir=ltr] input{text-align:left}
+  /* twist section */
+  #cmbYarn,#cusSys{direction:inherit;text-align:start;font-size:16px}
+  .tf{font-size:24px;font-weight:700;color:var(--brand);direction:ltr;text-align:left;margin:12px 0 2px}
+  .tf small{font-size:14px;color:var(--muted);font-weight:600}
+  .eq{font-size:13px;color:var(--muted);direction:ltr;text-align:left;margin-bottom:10px}
+  .ev{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;margin-top:8px}
+  .ev.strong{background:#e3f4e5;color:#1e6b2a} .ev.medium{background:#fff1d6;color:#7a5200} .ev.weak{background:#fde4dc;color:#9a2f12}
+  #tTitle,#tNote{direction:inherit;text-align:start}
+  .warn2{background:#fff4d6;color:#6b4e00;border-radius:10px;padding:8px 10px;font-size:13px;margin-top:10px}
+  .btn.copy{width:100%;background:var(--brand);color:#fff;font-size:16px;padding:14px;margin-bottom:12px}
   /* install helper */
   .inst{background:var(--card);border:2px solid var(--brand);border-radius:14px;padding:14px;margin-bottom:12px}
   .inst h2{margin:0 0 6px;font-size:16px;color:var(--brand)}
@@ -140,17 +150,26 @@
 
   <section class="card">
     <h2 data-t="twistTable"></h2>
+    <label for="cmbYarn" data-t="yarnType"></label>
+    <select id="cmbYarn"></select>
+    <div id="customBox" hidden>
+      <div class="grid" style="margin-top:10px">
+        <div><label for="cusSys" data-t="cusSys"></label><select id="cusSys"><option value="e">αe (Ne)</option><option value="m">αm (Nm)</option><option value="tex">αtex (ISO)</option></select></div>
+        <div></div>
+        <div><label for="cusMin" data-t="cusMin"></label><input id="cusMin" inputmode="decimal" autocomplete="off"></div>
+        <div><label for="cusMax" data-t="cusMax"></label><input id="cusMax" inputmode="decimal" autocomplete="off"></div>
+      </div>
+    </div>
+    <div class="warn2" id="fiberWarn" hidden></div>
+    <div class="tf" id="tfMain">—</div>
+    <div class="eq" id="tfEq"></div>
     <div class="head" id="tTitle">—</div>
     <table>
-      <thead><tr><th></th><th>Min</th><th>Max</th><th>Avg</th></tr></thead>
-      <tbody>
-        <tr><td class="lbl soft">Soft TF</td><td id="sTFmin">—</td><td id="sTFmax">—</td><td id="sTFavg">—</td></tr>
-        <tr><td class="lbl soft">Soft TPM</td><td id="sTPMmin">—</td><td id="sTPMmax">—</td><td id="sTPMavg">—</td></tr>
-        <tr><td class="lbl hard">Hard TF</td><td id="hTFmin">—</td><td id="hTFmax">—</td><td id="hTFavg">—</td></tr>
-        <tr><td class="lbl hard">Hard TPM</td><td id="hTPMmin">—</td><td id="hTPMmax">—</td><td id="hTPMavg">—</td></tr>
-      </tbody>
+      <thead><tr><th></th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
+      <tbody id="tBody"></tbody>
     </table>
     <div class="note" id="tNote"></div>
+    <span class="ev" id="tEv" hidden></span>
   </section>
 
   <section class="card">
@@ -163,7 +182,10 @@
     <input id="txtTwist" inputmode="decimal" autocomplete="off" value="0">
     <label style="margin-top:10px" id="lblTwistRes">Result Tf =</label>
     <div class="big" id="twistRes">—</div>
+    <div class="eq" id="twistEq"></div>
   </section>
+
+  <button class="btn copy" id="btnCopy" data-t="copyBtn"></button>
 
   <div class="toast" id="toast" hidden></div>
   <footer><button class="btn sec" id="btnShare" data-t="share"></button><br><br>By Eng. Amin Edris 2025 · <span id="ver"></span></footer>
@@ -171,9 +193,11 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 /* What's new — shown once after the app updates. Add a line for every release. */
 const CHANGELOG = {
+  "1.3.0": { ar:"قائمة جديدة لنوع الغزل والاستخدام، ومعامل البرم بيظهر بالنظام المتعارف عليه لكل نوع. نفس الخيط بيدي نفس البرم بأي نظام ترقيم. برم التزوية المقترح للخيوط المزوية. وزرار لنسخ النتائج.",
+             en:"New yarn type / end-use list; twist factor shown in each industry's usual system. Same yarn gives the same twist in any count system. Suggested ply twist for plied yarns. New button to copy the results." },
   "1.2.0": { ar:"حسابات البرم بقت على النمرة النهائية لو الخيط مزوي، وعلى السنجل لو طرف واحد. وبقى التطبيق يبلّغك بأي تحديث جديد.",
              en:"Twist is now calculated on the resultant count for plied yarn, and on the single count for 1-ply. The app now tells you about new updates." }
 };
@@ -184,7 +208,14 @@ const T = {
       from:"من نظام",to:"إلى نظام",fibers:"مراعاة اختلاف كثافة الألياف",fromFiber:"من خامة",toFiber:"إلى خامة",
       results:"النتائج",rReal:"النمرة المحوّلة (طاقة واحدة)",rPly:"النمرة المحوّلة بعدد الطاقات",
       rDens:"النمرة المكافئة بنفس القطر للخامة الجديدة",rWeight:"وزن المتر",rSoftDia:"القطر – برم خفيف (Soft)",
-      rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم",tSingle:"على النمرة السنجل",tPly:"على النمرة النهائية (مزوي {n} طرف)",twistCalc:"حاسبة البرم",
+      rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم",yarnType:"نوع الغزل / الاستخدام",cusSys:"نظام المعامل",cusMin:"أقل معامل",cusMax:"أعلى معامل",custom:"مدى مخصص (أدخل القيم)",
+      cusPrompt:"اكتب أقل وأعلى معامل",noRef:"مفيش مدى مرجعي لخامة {f} — اختار نوع من القائمة أو اكتب مدى مصنعك.",
+      bSingle:"على النمرة السنجل: {c}",bSinglePly:"برم السنجل على {c} — والتزوية مقترحة لـ {r}",bPly:"على النمرة النهائية: {r} = {c}",
+      plyRow:"تزوية مقترحة (S)",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع.",
+      eqL:"المكافئ",avg:"متوسط",evS:"دليل قوي",evM:"دليل متوسط",evW:"دليل ضعيف – يحتاج تحقق بقياسات المصنع",evC:"مدى من إدخالك",
+      guide:"المديات استرشادية من مراجع الغزل — يُفضّل مطابقتها بقياسات المصنع.",
+      copyBtn:"📋 نسخ النتائج",copiedRes:"تم نسخ النتائج — الصقها في أي مكان",copyFail:"تعذّر النسخ",
+      cTo:"إلى",cConv:"التحويل",cTwist:"البرم",cCount:"النمرة",cCalc:"حاسبة البرم",tSingle:"",tPly:"",twistCalc:"حاسبة البرم",
       offline:"أنت تعمل بدون إنترنت — التطبيق يعمل بشكل طبيعي",errCount:"أدخل النمرة المراد تحويلها",errPly:"عدد الطاقات يجب أن يكون 1 على الأقل",
       noManual:"تعذّر فتح الدليل",install:"تثبيت",share:"مشاركة رابط التطبيق",copied:"تم نسخ الرابط",
       iTitle:"ثبّت التطبيق على موبايلك",iSub:"مرة واحدة بس — بعدها يفتح من الأيقونة ويشتغل من غير نت.",
@@ -198,7 +229,14 @@ const T = {
       from:"From count",to:"To count",fibers:"Considering different fiber densities",fromFiber:"From fiber",toFiber:"To fiber",
       results:"Results",rReal:"Converted (1-ply)",rPly:"Converted (with ply)",
       rDens:"Matching diameter in new fiber",rWeight:"Weight of one meter",rSoftDia:"Soft twist diameter",
-      rHardDia:"Hard twist diameter",twistTable:"Twist calculations",tSingle:"on single count",tPly:"on resultant count ({n}-ply)",twistCalc:"Twist calculator",
+      rHardDia:"Hard twist diameter",twistTable:"Twist calculations",yarnType:"Yarn type / end use",cusSys:"Factor system",cusMin:"Min factor",cusMax:"Max factor",custom:"Custom range (enter values)",
+      cusPrompt:"Enter min and max factor",noRef:"No reference range for {f} — pick a type from the list or enter your mill's range.",
+      bSingle:"On single count: {c}",bSinglePly:"Singles twist on {c} — ply twist suggested for {r}",bPly:"On resultant count: {r} = {c}",
+      plyRow:"Ply twist, suggested (S)",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type.",
+      eqL:"Equivalent",avg:"avg",evS:"Strong evidence",evM:"Medium evidence",evW:"Weak evidence – verify with mill measurements",evC:"Your own range",
+      guide:"Ranges are guidance from spinning references — check them against your mill's measurements.",
+      copyBtn:"📋 Copy results",copiedRes:"Results copied — paste them anywhere",copyFail:"Could not copy",
+      cTo:"To",cConv:"Conversion",cTwist:"Twist",cCount:"Count",cCalc:"Twist calculator",tSingle:"",tPly:"",twistCalc:"Twist calculator",
       offline:"You are offline — the app works normally",errCount:"Enter count to convert",errPly:"Ply must be at least 1.",
       noManual:"Cannot open the manual",install:"Install",share:"Share app link",copied:"Link copied",
       iTitle:"Install the app on your phone",iSub:"One time only — then it opens from its icon and works offline.",
@@ -277,47 +315,71 @@ function packingFactor(f){
   return [1,1];
 }
 
-function twistFactorAndTPM(tex, soft, fromUnit){
-  let mn = 0, mx = 0;
-  if (fromUnit === "Ne"){
-    const ne = 590.5 / tex;
-    if      (ne <= 1)  [mn,mx] = soft ? [2.8,3.8] : [4,4.5];
-    else if (ne <= 6)  [mn,mx] = soft ? [3,3.8]   : [4,4.5];
-    else if (ne <= 10) [mn,mx] = soft ? [3.2,4]   : [4.2,4.5];
-    else               [mn,mx] = soft ? [3.5,4.2] : [4.3,4.5];   // fixed: Ne > 200 previously gave 0
-    const avg = (mn+mx)/2, k = 39.37 * Math.sqrt(ne);
-    return {tfAvg:round(avg,1), tpm:round(avg*k,1), tfMin:round(mn,1), tfMax:round(mx,1), tpmMin:round(mn*k,1), tpmMax:round(mx*k,1)};
-  }
-  if (fromUnit === "Nm"){
-    const nm = 1000 / tex;
-    if      (nm <= 1)  [mn,mx] = soft ? [40,50] : [60,80];
-    else if (nm <= 6)  [mn,mx] = soft ? [50,60] : [70,85];
-    else if (nm <= 10) [mn,mx] = soft ? [60,70] : [90,110];
-    else               [mn,mx] = soft ? [75,85] : [100,120];     // fixed: Nm > 200 previously gave 0
-    const avg = (mn+mx)/2, k = Math.sqrt(nm);
-    return {tfAvg:round(avg,2), tpm:round(avg*k,2), tfMin:round(mn,2), tfMax:round(mx,2), tpmMin:round(mn*k,2), tpmMax:round(mx*k,2)};
-  }
-  const tbl = [ // [upper tex, softMin, softMax, hardMin, hardMax]
-    [20,12,20,22,30],[50,10,14,15,25],[100,7,14,15,25],[200,8,11,15,25],[300,7,13,14,25],
-    [400,7,12,12,25],[500,7,10,12,25],[600,7,8,12,25],[700,7,8,12,25],[1000,7,8,12,24],
-    [1200,7,8,12,24],[1400,6,8,10,20],[1600,6,8,10,20],[Infinity,6,8,10,20] // fixed: 1600–1800 previously gave 0
-  ];
-  const row = tbl.find(r => tex <= r[0]);
-  [mn,mx] = soft ? [row[1],row[2]] : [row[3],row[4]];
-  const avg = (mn+mx)/2, s = Math.sqrt(tex);
-  return {tfAvg:round(avg,2), tpm:round(avg*100/s,2), tfMin:round(mn,2), tfMax:round(mx,2), tpmMin:round(mn*100/s,2), tpmMax:round(mx*100/s,2)};
-}
+/* ---------- twist by yarn type (v1.3.0) ----------
+   All ranges are stored as αe and applied on one tex basis, so the same yarn gives the same twist in any count system.
+   αm = αe × 30.25 ; αtex (TPM·√tex, ISO) = αe × 956.7 ; jute K = TPI × √(lb/spy)  */
+const AE_TEX = 39.37 * Math.sqrt(590.5);
+const AE_M   = 39.37 / Math.sqrt(1000 / 590.5);
+const M_ = v => v / AE_M, X_ = v => v / AE_TEX;
+const LB_PER_TEX = 13.16576 / 453.592;
+const tpmFromAe = (ae, tex) => ae * AE_TEX / Math.sqrt(tex);
+const aeFromTpm = (tpm, tex) => tpm * Math.sqrt(tex) / AE_TEX;
+const kJute = ae => ae * AE_TEX * Math.sqrt(LB_PER_TEX) / 39.37;
+const aeToSys = (ae, sys) => sys === "m" ? ae * AE_M : sys === "tex" ? ae * AE_TEX : ae;
+const sysToAe = (v, sys)  => sys === "m" ? M_(v) : sys === "tex" ? X_(v) : v;
 
-function twistSpecial(tex, fromUnit, tfMode, input){
-  if (fromUnit === "Ne"){
-    const ne = 590.5 / tex;
-    return tfMode ? round(input*39.37*Math.sqrt(ne),1) : round(input/(39.37*Math.sqrt(ne)),1);
+/* sys: e = αe, m = αm, tpi = turns per inch, jute = K ; basis: single = singles count, ply = resultant count
+   ratio: ply twist as a fraction of singles twist ; ev: evidence level (see research doc) */
+const YARNS = [
+  {id:"cot_warp",  ar:"قطن حلقي – سداء",                     en:"Cotton ring – warp",                 ae:[4.0,4.75],            sys:"e",   basis:"single", ratio:[0.5,0.78], ev:"S", src:"Uster SE 586 · Lawrence · Wikipedia"},
+  {id:"cot_weft",  ar:"قطن حلقي – لحمة",                     en:"Cotton ring – weft",                 ae:[3.3,3.8],             sys:"e",   basis:"single", ratio:[0.5,0.78], ev:"S", src:"Uster SE 586 · Lawrence · Wikipedia"},
+  {id:"cot_knit",  ar:"قطن حلقي – تريكو",                    en:"Cotton ring – knitting",             ae:[3.2,3.9],             sys:"e",   basis:"single", ratio:[0.5,0.78], ev:"S", src:"Uster SE 586 §6.1"},
+  {id:"cot_rotor", ar:"قطن مفتوح (Rotor) – نسيج",            en:"Cotton rotor – weaving",             ae:[4.7,5.1],             sys:"e",   basis:"single", ratio:[0.65,0.65],ev:"M", src:"Uster SE 586 §2.2 · SITRA"},
+  {id:"wst_weave", ar:"صوف ممشط – نسيج",                     en:"Worsted wool – weaving",             ae:[M_(80),M_(100)],      sys:"m",   basis:"single", ratio:[0.6,0.7],  ev:"M", src:"GLYarn · Lawrence (conflicting)"},
+  {id:"wst_knit",  ar:"صوف ممشط – تريكو",                    en:"Worsted wool – knitting",            ae:[M_(70),M_(105)],      sys:"m",   basis:"single", ratio:[0.6,0.6],  ev:"M", src:"Woolwise L19 · CSIRO"},
+  {id:"cpt_single",ar:"خيط سجاد صوف – سنجل",                 en:"Wool carpet yarn – singles",         ae:[X_(2670),X_(3680)],   sys:"m",   basis:"single", ratio:[0.54,0.73],ev:"M", src:"Woolwise L21 Tables 21.4–21.5"},
+  {id:"cpt_fold",  ar:"خيط سجاد صوف – تزوية عادية",          en:"Wool carpet yarn – folding",         ae:[X_(2440),X_(3000)],   sys:"m",   basis:"ply",    ratio:null,       ev:"M", src:"Woolwise L21 Tables 21.4–21.5"},
+  {id:"cpt_set",   ar:"خيط سجاد صوف – تزوية عالية البرم (فريزيه/ساكسوني)", en:"Wool carpet yarn – high-twist set (frisé/saxony)", ae:[X_(4660),X_(7640)], sys:"m", basis:"ply", ratio:null, ev:"M", src:"Woolwise L21 Tables 21.4–21.5"},
+  {id:"cpt_axm",   ar:"خيط سجاد Axminster",                  en:"Axminster carpet yarn",              ae:[X_(1370),X_(1410)],   sys:"m",   basis:"single", ratio:[0.7,0.7],  ev:"M", src:"Woolwise L21 p.21-13"},
+  {id:"pp_bcf",    ar:"بولي بروبلين BCF مزوي ومثبّت حرارياً", en:"PP BCF cabled, heat-set",            ae:[X_(2600),X_(3340)],   sys:"tpi", basis:"ply",    ratio:null,       ev:"W", src:"US 5,587,229"},
+  {id:"jute",      ar:"جوت",                                  en:"Jute",                               ae:[X_(2420),X_(2630)],   sys:"jute",basis:"single", ratio:null,       ev:"W", src:"Ekundayo 2024 · textilecalculations"},
+  {id:"custom",    ar:null, en:null,                                                                   ae:null,                  sys:"custom", basis:"single", ratio:null, ev:"C", src:""}
+];
+const FIBER_DEFAULT = {Cotton:"cot_warp", Wool:"cpt_single", PolyProp:"pp_bcf", Jute:"jute"};
+
+const nf = (n, d) => Number.isFinite(n) ? n.toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d}) : "—";
+function sysName(sys){ return sys === "m" ? "αm" : sys === "tex" ? "αtex" : "αe"; }
+function sysDec(sys){ return sys === "m" ? 1 : sys === "tex" ? 0 : 2; }
+
+/* returns the twist result for a yarn type on a given tex basis */
+function twistForType(y, tex, custom){
+  let ae = y.ae, sys = y.sys;
+  if (y.id === "custom"){
+    if (!custom || !(custom.min > 0) || !(custom.max > 0)) return null;
+    sys = custom.sys;
+    ae = [sysToAe(Math.min(custom.min,custom.max), sys), sysToAe(Math.max(custom.min,custom.max), sys)];
   }
-  if (fromUnit === "Nm"){
-    const nm = 1000 / tex;
-    return tfMode ? round(input*Math.sqrt(nm),1) : round(input/Math.sqrt(nm),1);
-  }
-  return tfMode ? round(input*100/Math.sqrt(tex),0) : round(input*Math.sqrt(tex)/100,0);
+  const aeAvg = (ae[0] + ae[1]) / 2;
+  const tpm = [tpmFromAe(ae[0], tex), tpmFromAe(aeAvg, tex), tpmFromAe(ae[1], tex)];
+  return {ae:[ae[0], aeAvg, ae[1]], sys, tpm, tpi: tpm.map(t => t / 39.37)};
+}
+function primaryText(r, L){
+  const a = r.ae;
+  if (r.sys === "tpi")  return `${nf(r.tpi[0],1)} – ${nf(r.tpi[2],1)} TPI <small>(${L.avg} ${nf(r.tpi[1],1)})</small>`;
+  if (r.sys === "jute") return `K ${nf(kJute(a[0]),1)} – ${nf(kJute(a[2]),1)} <small>(K = TPI × √lb · ${L.avg} ${nf(kJute(a[1]),1)})</small>`;
+  const d = sysDec(r.sys);
+  return `${sysName(r.sys)} ${nf(aeToSys(a[0],r.sys),d)} – ${nf(aeToSys(a[2],r.sys),d)} <small>(${L.avg} ${nf(aeToSys(a[1],r.sys),d)})</small>`;
+}
+function primaryPlain(r){
+  const a = r.ae;
+  if (r.sys === "tpi")  return `${nf(r.tpi[0],1)}–${nf(r.tpi[2],1)} TPI`;
+  if (r.sys === "jute") return `K ${nf(kJute(a[0]),1)}–${nf(kJute(a[2]),1)}`;
+  const d = sysDec(r.sys);
+  return `${sysName(r.sys)} ${nf(aeToSys(a[0],r.sys),d)}–${nf(aeToSys(a[2],r.sys),d)}`;
+}
+function eqText(r){
+  const a = r.ae;
+  return `αe ${nf(a[0],2)}–${nf(a[2],2)} · αm ${nf(a[0]*AE_M,1)}–${nf(a[2]*AE_M,1)} · αtex ${nf(a[0]*AE_TEX,0)}–${nf(a[2]*AE_TEX,0)}`;
 }
 
 /* ---------- UI ---------- */
@@ -326,6 +388,21 @@ function fill(sel, items, idx){ sel.innerHTML = items.map(i=>`<option>${i}</opti
 fill($("cmbFrom"), UNITS, 4); fill($("cmbTo"), UNITS, 3);
 fill($("cmbFromFiber"), FIBERS, 0); fill($("cmbToFiber"), FIBERS, 0);
 let tfMode = false;
+let yarnUserPicked = false;
+function fillYarns(){
+  const cur = $("cmbYarn").value;
+  $("cmbYarn").innerHTML = YARNS.map(y => `<option value="${y.id}">${y.id === "custom" ? T[lang].custom : y[lang]}</option>`).join("");
+  if (cur) $("cmbYarn").value = cur;
+}
+function autoYarn(){
+  if (yarnUserPicked) return;
+  $("cmbYarn").value = FIBER_DEFAULT[$("cmbFromFiber").value] || "custom";
+}
+try {
+  const c = JSON.parse(localStorage.getItem("customTF") || "null");
+  if (c){ $("cusSys").value = c.sys || "e"; $("cusMin").value = c.min ?? ""; $("cusMax").value = c.max ?? ""; }
+} catch(e){}
+let lastOut = null;
 
 function num(s){
   s = String(s).trim().replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[٫,]/g, ".");
@@ -334,13 +411,22 @@ function num(s){
 function tIn(tpm, d){ return `${fmt(tpm)}\n${fmt(round(tpm/39.37, d))} T/in`; }
 
 function clearOut(){
-  ["rReal","rPly","rDens","rWeight","rSoftDia","rHardDia","sTFmin","sTFmax","sTFavg","sTPMmin","sTPMmax","sTPMavg",
-   "hTFmin","hTFmax","hTFavg","hTPMmin","hTPMmax","hTPMavg","twistRes"].forEach(id => $(id).textContent = "—");
+  ["rReal","rPly","rDens","rWeight","rSoftDia","rHardDia","twistRes"].forEach(id => $(id).textContent = "—");
   $("rTitle").textContent = "—"; $("tTitle").textContent = "—"; $("tNote").textContent = "";
+  $("tfMain").textContent = "—"; $("tfEq").textContent = ""; $("tBody").innerHTML = ""; $("twistEq").textContent = "";
+  $("tEv").hidden = true; lastOut = null;
 }
 
 function compute(){
   const L = T[lang];
+  const yid = $("cmbYarn").value || "custom";
+  const y = YARNS.find(t => t.id === yid);
+  $("customBox").hidden = yid !== "custom";
+  const fFibNow = $("cmbFromFiber").value;
+  const noRef = yid === "custom" && !FIBER_DEFAULT[fFibNow];
+  $("fiberWarn").hidden = !noRef;
+  if (noRef) $("fiberWarn").textContent = L.noRef.replace("{f}", fFibNow);
+
   const v = num($("txtValue").value), ply = num($("txtPly").value);
   $("err").textContent = "";
   if (!Number.isFinite(v) || v <= 0){ clearOut(); if ($("txtValue").value.trim() !== "" && $("txtValue").value.trim() !== "0") $("err").textContent = L.errCount; return; }
@@ -367,39 +453,115 @@ function compute(){
   $("rSoftDia").textContent = `${fmt(round(dia/pf[0],4))} mm`;
   $("rHardDia").textContent = `${fmt(round(dia/pf[1],4))} mm`;
 
-  // Twist basis: single yarn when ply = 1, resultant (final) count when plied
-  const twistTex = ply > 1 ? texTotal : texSingle;
-  const s = twistFactorAndTPM(twistTex, true, from), h = twistFactorAndTPM(twistTex, false, from);
-  $("tTitle").textContent = ply > 1
-    ? `${fmt(v)}/${ply} ${from} = ${fmt(round(convertFromTex(twistTex, from),2))}/1 ${from} — ${L.tPly.replace("{n}", ply)}`
-    : `${fmt(v)}/1 ${from} — ${L.tSingle}`;
-  $("sTFmin").textContent = fmt(s.tfMin); $("sTFmax").textContent = fmt(s.tfMax); $("sTFavg").textContent = fmt(s.tfAvg);
-  $("hTFmin").textContent = fmt(h.tfMin); $("hTFmax").textContent = fmt(h.tfMax); $("hTFavg").textContent = fmt(h.tfAvg);
-  if (from === "Ne"){
-    $("sTPMmin").textContent = tIn(s.tpmMin,0); $("sTPMmax").textContent = tIn(s.tpmMax,0); $("sTPMavg").textContent = tIn(s.tpm,0);
-    $("hTPMmin").textContent = tIn(h.tpmMin,0); $("hTPMmax").textContent = tIn(h.tpmMax,0); $("hTPMavg").textContent = tIn(h.tpm,0);
-  } else {
-    $("sTPMmin").textContent = fmt(s.tpmMin); $("sTPMmax").textContent = fmt(s.tpmMax); $("sTPMavg").textContent = fmt(s.tpm);
-    $("hTPMmin").textContent = fmt(h.tpmMin); $("hTPMmax").textContent = fmt(h.tpmMax); $("hTPMavg").textContent = fmt(h.tpm);
-  }
-  $("tNote").textContent = from === "Ne" ? "Cotton system: Turns/inch = TPM / 39.37 — twist factor from 2.8 to 4.5"
-                        : from === "Nm" ? "Wool system: twist factor from 60 to 120"
-                        : "Tex system: twist factor from 8 to 40";
+  /* ---- twist ---- */
+  const custom = {sys:$("cusSys").value, min:num($("cusMin").value), max:num($("cusMax").value)};
+  const basisTex = y.basis === "ply" ? texTotal : texSingle;
+  const r = twistForType(y, basisTex, custom);
+  const cSingle = `${fmt(v)}/1 ${from}`, cRes = `${fmt(v)}/${ply} ${from}`;
+  const cResEq  = `${fmt(round(convertFromTex(texTotal, from),2))}/1 ${from}`;
+  let basisTxt;
+  if (y.basis === "ply") basisTxt = ply > 1 ? L.bPly.replace("{r}", cRes).replace("{c}", cResEq) : L.bSingle.replace("{c}", cSingle);
+  else basisTxt = ply > 1 ? L.bSinglePly.replace("{c}", cSingle).replace("{r}", cRes) : L.bSingle.replace("{c}", cSingle);
+  const iso = t => "\u2066" + t + "\u2069";   // keep counts like "20/1 Ne" intact inside Arabic text
+  $("tTitle").textContent = (y.basis === "ply"
+    ? (ply > 1 ? L.bPly.replace("{r}", iso(cRes)).replace("{c}", iso(cResEq)) : L.bSingle.replace("{c}", iso(cSingle)))
+    : (ply > 1 ? L.bSinglePly.replace("{c}", iso(cSingle)).replace("{r}", iso(cRes)) : L.bSingle.replace("{c}", iso(cSingle))));
 
-  const tw = num($("txtTwist").value);
-  if (!Number.isFinite(tw) || tw === 0){ $("twistRes").textContent = "—"; }
-  else {
-    const r = twistSpecial(twistTex, from, tfMode, tw);
-    $("twistRes").textContent = (from === "Ne" && tfMode) ? `${fmt(r)}  (${fmt(round(r/39.37,1))} T/in)` : fmt(r);
+  const evCls = {S:"strong", M:"medium", W:"weak", C:"strong"}[y.ev];
+  $("tEv").className = "ev " + evCls; $("tEv").textContent = {S:L.evS, M:L.evM, W:L.evW, C:L.evC}[y.ev]; $("tEv").hidden = false;
+
+  let plyTpm = null, notes = [];
+  if (!r){
+    $("tfMain").textContent = L.cusPrompt; $("tfEq").textContent = ""; $("tBody").innerHTML = "";
+  } else {
+    $("tfMain").innerHTML = primaryText(r, L);
+    $("tfEq").textContent = `${L.eqL}: ${eqText(r)}`;
+    const row = (lbl, a, d) => `<tr><td class="lbl">${lbl}</td>${a.map(x => `<td>${nf(x,d)}</td>`).join("")}</tr>`;
+    let html = row("TPM", r.tpm, 0) + row("T/in", r.tpi, 1);
+    if (y.basis === "single" && ply > 1){
+      if (y.ratio){
+        plyTpm = [r.tpm[1]*y.ratio[0], r.tpm[1]*(y.ratio[0]+y.ratio[1])/2, r.tpm[1]*y.ratio[1]];
+        html += `<tr><td class="lbl soft">${L.plyRow}<br><small>TPM</small></td>${plyTpm.map(x => `<td class="soft">${nf(x,0)}</td>`).join("")}</tr>`;
+        notes.push(L.plyNote.replace("{a}–{b}", "\u2066" + y.ratio[0] + "–" + y.ratio[1] + "\u2069"));
+      } else notes.push(L.plyNone);
+    }
+    $("tBody").innerHTML = html;
   }
+  if (y.src) notes.push("📚 \u2066" + y.src + "\u2069");
+  notes.push(L.guide);
+  $("tNote").textContent = notes.join("  ·  ");
+
+  /* ---- calculator ---- */
+  const cSys = r ? (r.sys === "tpi" || r.sys === "jute" ? "tex" : r.sys) : (y.id === "custom" ? custom.sys : "e");
+  const nm = sysName(cSys);
+  $("lblTwist").textContent    = tfMode ? `Enter ${nm} =` : "Enter TPM =";
+  $("lblTwistRes").textContent = tfMode ? "Result TPM =" : `Result ${nm} =`;
+  const tw = num($("txtTwist").value);
+  let calcTxt = null;
+  $("twistEq").textContent = "";
+  if (!Number.isFinite(tw) || tw === 0){ $("twistRes").textContent = "—"; }
+  else if (tfMode){
+    const tpm = tpmFromAe(sysToAe(tw, cSys), basisTex);
+    $("twistRes").textContent = `${nf(tpm,0)} TPM`;
+    $("twistEq").textContent = `${nf(tpm/39.37,1)} T/in`;
+    calcTxt = `${nm} ${fmt(tw)} → ${nf(tpm,0)} TPM (${nf(tpm/39.37,1)} T/in)`;
+  } else {
+    const ae = aeFromTpm(tw, basisTex);
+    $("twistRes").textContent = `${nm} ${nf(aeToSys(ae, cSys), sysDec(cSys))}`;
+    $("twistEq").textContent = `αe ${nf(ae,2)} · αm ${nf(ae*AE_M,1)} · αtex ${nf(ae*AE_TEX,0)}`;
+    calcTxt = `${fmt(tw)} TPM → αe ${nf(ae,2)} · αm ${nf(ae*AE_M,1)} · αtex ${nf(ae*AE_TEX,0)}`;
+  }
+
+  lastOut = {from, to, fFib, tFib, v, ply,
+    real:$("rReal").textContent, plyC:$("rPly").textContent, dens:$("rDens").textContent, weight:$("rWeight").textContent,
+    soft:$("rSoftDia").textContent, hard:$("rHardDia").textContent,
+    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, ratio:y.ratio, calcTxt};
+}
+
+function buildCopyText(){
+  const L = T[lang], o = lastOut;
+  if (!o) return null;
+  const line = "━━━━━━━━━━━━━━━━";
+  const out = [`🧵 ${L.title}`, line,
+    `${L.cCount}: ${fmt(o.v)}/${o.ply} ${o.from} · ${o.fFib}`,
+    `${L.cTo}: ${o.to} · ${o.tFib}`, "",
+    `📐 ${L.cConv}`,
+    `• ${L.rReal}: ${o.real}`,
+    `• ${L.rPly}: ${o.plyC}`,
+    `• ${L.rDens}: ${o.dens}`,
+    `• ${L.rWeight}: ${o.weight}`,
+    `• ${L.rSoftDia}: ${o.soft}`,
+    `• ${L.rHardDia}: ${o.hard}`, ""];
+  if (o.r){
+    out.push(`🌀 ${L.cTwist}: ${o.yName} (${primaryPlain(o.r)})`);
+    out.push(`• ${o.basisTxt}`);
+    out.push(`• TPM: ${nf(o.r.tpm[0],0)} / ${nf(o.r.tpm[1],0)} / ${nf(o.r.tpm[2],0)}  (T/in ${nf(o.r.tpi[0],1)} / ${nf(o.r.tpi[1],1)} / ${nf(o.r.tpi[2],1)})`);
+    if (o.plyTpm) out.push(`• ${L.plyRow}: ${nf(o.plyTpm[0],0)}–${nf(o.plyTpm[2],0)} TPM`);
+    out.push(`• ${L.eqL}: ${eqText(o.r)}`);
+  } else out.push(`🌀 ${L.cTwist}: ${o.yName}`);
+  if (o.calcTxt) out.push(`• ${L.cCalc}: ${o.calcTxt}`);
+  out.push(line, `${new URL("./", location.href).href} · v${APP_VERSION}`);
+  return out.join("\n");
+}
+async function copyResults(){
+  const L = T[lang], txt = buildCopyText();
+  if (!txt){ showToast(`<b>${L.errCount}</b>`); return; }
+  let ok = false;
+  try { await navigator.clipboard.writeText(txt); ok = true; } catch(e){}
+  if (!ok){
+    try {
+      const ta = document.createElement("textarea"); ta.value = txt; ta.setAttribute("readonly",""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); ta.remove();
+    } catch(e){}
+  }
+  showToast(`<b>${ok ? "✓ " + L.copiedRes : L.copyFail}</b>`);
+  if (ok) setTimeout(() => { $("toast").hidden = true; }, 2500);
 }
 
 function setMode(tf){
   tfMode = tf;
   $("modeTf").classList.toggle("on", tf);  $("modeTf").setAttribute("aria-checked", tf);
   $("modeTpm").classList.toggle("on", !tf); $("modeTpm").setAttribute("aria-checked", !tf);
-  $("lblTwist").textContent    = tf ? "Enter Tf =" : "Enter Tpm =";
-  $("lblTwistRes").textContent = tf ? "Result Tpm =" : "Result Tf =";
   compute();
 }
 
@@ -410,12 +572,19 @@ function applyLang(){
   document.querySelectorAll("[data-t]").forEach(el => el.textContent = L[el.dataset.t]);
   $("btnLang").textContent = lang === "ar" ? "EN" : "ع";
   document.title = L.title;
+  fillYarns();
   if (window.__instReady) renderInstall();
   compute();
 }
 
 ["txtValue","txtPly","txtTwist"].forEach(id => $(id).addEventListener("input", compute));
-["cmbFrom","cmbTo","cmbFromFiber","cmbToFiber"].forEach(id => $(id).addEventListener("change", compute));
+["cmbFrom","cmbTo","cmbToFiber"].forEach(id => $(id).addEventListener("change", compute));
+$("cmbFromFiber").addEventListener("change", () => { yarnUserPicked = false; autoYarn(); compute(); });
+$("cmbYarn").addEventListener("change", () => { yarnUserPicked = true; compute(); });
+function saveCustom(){ try { localStorage.setItem("customTF", JSON.stringify({sys:$("cusSys").value, min:$("cusMin").value, max:$("cusMax").value})); } catch(e){} }
+["cusMin","cusMax"].forEach(id => $(id).addEventListener("input", () => { saveCustom(); compute(); }));
+$("cusSys").addEventListener("change", () => { saveCustom(); compute(); });
+$("btnCopy").addEventListener("click", copyResults);
 $("txtValue").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("txtPly").focus(); }});
 $("txtPly").addEventListener("blur", () => { if ($("txtPly").value.trim() === "" || num($("txtPly").value) === 0){ $("txtPly").value = "1"; compute(); }});
 $("modeTf").addEventListener("click", () => setMode(true));
@@ -527,9 +696,10 @@ if ("serviceWorker" in navigator){
 
 window.__instReady = true;
 renderInstall();
+autoYarn(); compute();
 
 /* expose for tests */
-window.__calc = {convertToTex, convertFromTex, twistFactorAndTPM, twistSpecial, round};
+window.__calc = {convertToTex, convertFromTex, twistForType, YARNS, AE_TEX, AE_M, kJute, round, buildCopyText};
 </script>
 </body>
 </html>
