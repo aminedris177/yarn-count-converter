@@ -71,7 +71,7 @@
   body.offline .off{display:block}
   [dir=ltr] .res .v,[dir=ltr] input{text-align:left}
   /* twist section */
-  #cmbYarn,#cusSys,#cmbRatio{direction:inherit;text-align:start;font-size:16px}
+  #cmbYarn,#cusSys,#cmbRatio,#cmbLevel{direction:inherit;text-align:start;font-size:16px}
   .tf{font-size:24px;font-weight:700;color:var(--brand);direction:ltr;text-align:left;margin:12px 0 2px}
   .tf small{font-size:14px;color:var(--muted);font-weight:600}
   .eq{font-size:13px;color:var(--muted);direction:ltr;text-align:left;margin-bottom:10px}
@@ -183,6 +183,11 @@
       <div id="ratioCusBox" hidden style="margin-top:8px"><input id="ratioCus" inputmode="decimal" autocomplete="off" placeholder="0.70"></div>
       <div class="note" id="ratioHint" style="direction:inherit;text-align:start"></div>
     </div>
+    <div id="levelBox" hidden style="margin-top:12px">
+      <label for="cmbLevel" data-t="levelLbl"></label>
+      <select id="cmbLevel"></select>
+      <div id="levelCusBox" hidden style="margin-top:8px"><input id="levelCus" inputmode="decimal" autocomplete="off" placeholder="0.80"></div>
+    </div>
     <div class="note" id="tNote"></div>
     <span class="ev" id="tEv" hidden></span>
   </section>
@@ -208,9 +213,11 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.3.3";
+const APP_VERSION = "1.3.4";
 /* What's new — shown once after the app updates. Add a line for every release. */
 const CHANGELOG = {
+  "1.3.4": { ar:"بولي بروبلين BCF المزوي: قائمة جديدة لمستوى برم التزوية (خفيف 0.5 / متوسط 0.7 / عالي 0.9 / رقم آخر) بتتضرب في البرم المرجعي على النمرة النهائية.",
+             en:"PP BCF plied: new ply-twist level list (light 0.5 / medium 0.7 / high 0.9 / other) applied to the reference twist on the resultant count." },
   "1.3.3": { ar:"عرض أوضح للبرم: الخيط السنجل بيتعرض برمه السنجل، والمزوي بيتعرض برم التزوية بس. والبرم المقترح بقى في مربع مميز فوق الجدول.",
              en:"Clearer twist display: a single yarn shows its singles twist, a plied yarn shows only its ply twist. The suggested twist now sits in a highlighted box above the table." },
   "1.3.2": { ar:"قائمة نسبة التزوية بقت ظاهرة دايماً وشغالة لكل الخامات والسجاد (BCF وتزوية الصوف بتحسب برم السنجل المقترح). ضفنا نسب للفريزيه والساكسوني والبرم الشديد، واقتراحات للخامات اللي ملهاش مرجع.",
@@ -232,7 +239,7 @@ const T = {
       rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم",yarnType:"نوع الغزل / الاستخدام",cusSys:"نظام المعامل",cusMin:"أقل معامل",cusMax:"أعلى معامل",custom:"مدى مخصص (أدخل القيم)",
       cusPrompt:"اكتب أقل وأعلى معامل",noRef:"مفيش مدى مرجعي لخامة {f} — اختار نوع من القائمة أو اكتب مدى مصنعك.",
       bSingle:"على النمرة السنجل: {c}",bSinglePly:"برم السنجل على {c} — والتزوية مقترحة لـ {r}",bPly:"على النمرة النهائية: {r} = {c}",
-      plyRow:"تزوية مقترحة (S)",tSing:"برم الخيط السنجل: {c}",tPlyd:"برم الخيط المزوي: {r} (النمرة النهائية {c})",tAsIs:"برم الخيط: {c}",sugT:"البرم المقترح",sugTPly:"برم التزوية المقترح (S)",range:"المدى",fromRef:"برم التزوية محسوب من المرجع مباشرة على النمرة النهائية.",byRatio:"برم التزوية محسوب بنسبة {a} ({src}).",pickRatio:"اختار نسبة التزوية من القائمة عشان يتحسب برم المزوي.",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع — اختار نسبة من القائمة.",ratioLbl:"نسبة برم التزوية",rAuto:"تلقائي",rAutoNone:"تلقائي — مفيش نسبة لهذا النوع",grpRef:"نسب من المراجع",grpSug:"اقتراحات (بدون مرجع موثّق)",sugTag:"اقتراح",hintPly1:"اكتب Ply = 2 أو أكتر عشان تتحسب التزوية.",hintNoTwist:"اختار نوع غزل أو اكتب مدى الأول.",singRow:"سنجل مقترح (Z)",singFixed:"برم السنجل = برم التزوية ÷ {a} ({src})، في الاتجاه العكسي: Z تحت S.",singRange:"برم السنجل = برم التزوية ÷ {a}، في الاتجاه العكسي: Z تحت S.",sugWarn:"⚠️ النسبة دي اقتراح هندسي بدون مرجع موثّق — جرّبها وطابقها بقياسات المصنع.",rCustom:"نسبة أخرى (اكتبها)",plyFixed:"برم التزوية = {a} × برم السنجل ({src})، في الاتجاه العكسي: S على Z.",
+      plyRow:"تزوية مقترحة (S)",tSing:"برم الخيط السنجل: {c}",tPlyd:"برم الخيط المزوي: {r} (النمرة النهائية {c})",tAsIs:"برم الخيط: {c}",levelLbl:"مستوى برم التزوية",lvLow:"برم خفيف",lvMed:"برم متوسط",lvHigh:"برم عالي",lvCus:"رقم آخر (اكتبه)",lvNote:"برم التزوية = البرم المرجعي على النمرة النهائية × {a} ({n}).",lvPick:"اكتب نسبة مستوى البرم.",sugT:"البرم المقترح",sugTPly:"برم التزوية المقترح (S)",range:"المدى",fromRef:"برم التزوية محسوب من المرجع مباشرة على النمرة النهائية.",byRatio:"برم التزوية محسوب بنسبة {a} ({src}).",pickRatio:"اختار نسبة التزوية من القائمة عشان يتحسب برم المزوي.",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع — اختار نسبة من القائمة.",ratioLbl:"نسبة برم التزوية",rAuto:"تلقائي",rAutoNone:"تلقائي — مفيش نسبة لهذا النوع",grpRef:"نسب من المراجع",grpSug:"اقتراحات (بدون مرجع موثّق)",sugTag:"اقتراح",hintPly1:"اكتب Ply = 2 أو أكتر عشان تتحسب التزوية.",hintNoTwist:"اختار نوع غزل أو اكتب مدى الأول.",singRow:"سنجل مقترح (Z)",singFixed:"برم السنجل = برم التزوية ÷ {a} ({src})، في الاتجاه العكسي: Z تحت S.",singRange:"برم السنجل = برم التزوية ÷ {a}، في الاتجاه العكسي: Z تحت S.",sugWarn:"⚠️ النسبة دي اقتراح هندسي بدون مرجع موثّق — جرّبها وطابقها بقياسات المصنع.",rCustom:"نسبة أخرى (اكتبها)",plyFixed:"برم التزوية = {a} × برم السنجل ({src})، في الاتجاه العكسي: S على Z.",
       eqL:"المكافئ",avg:"متوسط",evS:"دليل قوي",evM:"دليل متوسط",evW:"دليل ضعيف – يحتاج تحقق بقياسات المصنع",evC:"مدى من إدخالك",
       guide:"المديات استرشادية من مراجع الغزل — يُفضّل مطابقتها بقياسات المصنع.",
       copyBtn:"📋 نسخ النتائج",copiedRes:"تم نسخ النتائج — الصقها في أي مكان",copyFail:"تعذّر النسخ",
@@ -253,7 +260,7 @@ const T = {
       rHardDia:"Hard twist diameter",twistTable:"Twist calculations",yarnType:"Yarn type / end use",cusSys:"Factor system",cusMin:"Min factor",cusMax:"Max factor",custom:"Custom range (enter values)",
       cusPrompt:"Enter min and max factor",noRef:"No reference range for {f} — pick a type from the list or enter your mill's range.",
       bSingle:"On single count: {c}",bSinglePly:"Singles twist on {c} — ply twist suggested for {r}",bPly:"On resultant count: {r} = {c}",
-      plyRow:"Ply twist, suggested (S)",tSing:"Single yarn twist: {c}",tPlyd:"Plied yarn twist: {r} (resultant {c})",tAsIs:"Yarn twist: {c}",sugT:"Suggested twist",sugTPly:"Suggested ply twist (S)",range:"range",fromRef:"Ply twist taken directly from the reference on the resultant count.",byRatio:"Ply twist calculated with ratio {a} ({src}).",pickRatio:"Pick a ply twist ratio from the list to calculate the plied twist.",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type — pick one from the list.",ratioLbl:"Ply twist ratio",rAuto:"Auto",rAutoNone:"Auto — no ratio for this type",grpRef:"Referenced ratios",grpSug:"Suggestions (no documented source)",sugTag:"suggestion",hintPly1:"Enter Ply = 2 or more to calculate ply twist.",hintNoTwist:"Pick a yarn type or enter a range first.",singRow:"Singles, suggested (Z)",singFixed:"Singles twist = ply twist ÷ {a} ({src}), opposite direction: Z under S.",singRange:"Singles twist = ply twist ÷ {a}, opposite direction: Z under S.",sugWarn:"⚠️ This ratio is an engineering suggestion with no documented source — trial it and check against mill measurements.",rCustom:"Other ratio (type it)",plyFixed:"Ply twist = {a} × singles twist ({src}), opposite direction (S on Z).",
+      plyRow:"Ply twist, suggested (S)",tSing:"Single yarn twist: {c}",tPlyd:"Plied yarn twist: {r} (resultant {c})",tAsIs:"Yarn twist: {c}",levelLbl:"Ply twist level",lvLow:"Light twist",lvMed:"Medium twist",lvHigh:"High twist",lvCus:"Other (type it)",lvNote:"Ply twist = reference twist on resultant count × {a} ({n}).",lvPick:"Enter a twist-level factor.",sugT:"Suggested twist",sugTPly:"Suggested ply twist (S)",range:"range",fromRef:"Ply twist taken directly from the reference on the resultant count.",byRatio:"Ply twist calculated with ratio {a} ({src}).",pickRatio:"Pick a ply twist ratio from the list to calculate the plied twist.",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type — pick one from the list.",ratioLbl:"Ply twist ratio",rAuto:"Auto",rAutoNone:"Auto — no ratio for this type",grpRef:"Referenced ratios",grpSug:"Suggestions (no documented source)",sugTag:"suggestion",hintPly1:"Enter Ply = 2 or more to calculate ply twist.",hintNoTwist:"Pick a yarn type or enter a range first.",singRow:"Singles, suggested (Z)",singFixed:"Singles twist = ply twist ÷ {a} ({src}), opposite direction: Z under S.",singRange:"Singles twist = ply twist ÷ {a}, opposite direction: Z under S.",sugWarn:"⚠️ This ratio is an engineering suggestion with no documented source — trial it and check against mill measurements.",rCustom:"Other ratio (type it)",plyFixed:"Ply twist = {a} × singles twist ({src}), opposite direction (S on Z).",
       eqL:"Equivalent",avg:"avg",evS:"Strong evidence",evM:"Medium evidence",evW:"Weak evidence – verify with mill measurements",evC:"Your own range",
       guide:"Ranges are guidance from spinning references — check them against your mill's measurements.",
       copyBtn:"📋 Copy results",copiedRes:"Results copied — paste them anywhere",copyFail:"Could not copy",
@@ -404,6 +411,8 @@ function autoRatio(y, fiber){
   const o = RATIOS.find(x => x.id === id);
   return o ? {r:o.r, src:o.src || "", kind:o.kind, name:o[lang]} : null;
 }
+/* PP BCF plied: twist level applied to the reference twist on the resultant count (user-defined levels) */
+const LEVELS = [{id:"low", k:0.5, t:"lvLow"}, {id:"med", k:0.7, t:"lvMed"}, {id:"high", k:0.9, t:"lvHigh"}];
 const rTxt = r => r[0] === r[1] ? String(r[0]) : `${r[0]}–${r[1]}`;
 
 const nf = (n, d) => Number.isFinite(n) ? n.toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d}) : "—";
@@ -467,6 +476,11 @@ function fillRatios(y, fiber){
   $("cmbRatio").value = cur || "auto";
   if (!$("cmbRatio").value) $("cmbRatio").value = "auto";
 }
+function fillLevels(){
+  const L = T[lang], cur = $("cmbLevel").value || "med";
+  $("cmbLevel").innerHTML = LEVELS.map(o => `<option value="${o.id}">${L[o.t]} — ${o.k}</option>`).join("") + `<option value="custom">${L.lvCus}</option>`;
+  $("cmbLevel").value = cur;
+}
 function autoYarn(){
   if (yarnUserPicked) return;
   $("cmbYarn").value = FIBER_DEFAULT[$("cmbFromFiber").value] || "custom";
@@ -476,6 +490,7 @@ try {
   if (c){ $("cusSys").value = c.sys || "e"; $("cusMin").value = c.min ?? ""; $("cusMax").value = c.max ?? ""; }
 } catch(e){}
 try { $("ratioCus").value = localStorage.getItem("ratioCus") || ""; } catch(e){}
+try { $("levelCus").value = localStorage.getItem("levelCus") || ""; } catch(e){}
 let lastOut = null;
 
 function num(s){
@@ -556,9 +571,23 @@ function compute(){
   $("ratioHint").textContent = "";
 
   let D = null, plyRatio = null;                 // D = the twist that is displayed
+  const needLevel = plied && y.id === "pp_bcf";
+  fillLevels();
+  $("levelBox").hidden = !needLevel;
+  $("levelCusBox").hidden = !(needLevel && $("cmbLevel").value === "custom");
+  let levelK = null, levelName = "";
   if (y.basis === "ply"){
     D = twistForType(y, showTex, custom);
-    if (D && plied) notes.push(L.fromRef);
+    if (D && needLevel){
+      const sel = $("cmbLevel").value;
+      if (sel === "custom"){ const c = num($("levelCus").value); if (c > 0){ levelK = c; levelName = L.lvCus.replace(/ \(.*\)/, ""); } }
+      else { const o = LEVELS.find(x => x.id === sel); levelK = o.k; levelName = L[o.t]; }
+      if (levelK){
+        const tpm = D.tpm.map(t => t * levelK);
+        D = {tpm, tpi: tpm.map(t => t / 39.37), ae: tpm.map(t => aeFromTpm(t, showTex)), sys: D.sys};
+        notes.push(L.lvNote.replace("{a}", iso(String(levelK))).replace("{n}", levelName));
+      } else { D = null; $("tfMain").textContent = L.lvPick; }
+    } else if (D && plied) notes.push(L.fromRef);
   } else {
     const rs = twistForType(y, texSingle, custom);
     if (rs && !plied) D = rs;
@@ -579,7 +608,7 @@ function compute(){
   }
 
   if (!D){
-    $("tfMain").textContent = (y.id === "custom" && !twistForType(y, texSingle, custom)) ? L.cusPrompt : "—";
+    $("tfMain").textContent = needLevel ? L.lvPick : (y.id === "custom" && !twistForType(y, texSingle, custom)) ? L.cusPrompt : "—";
     $("tfEq").textContent = ""; $("tBody").innerHTML = ""; $("sugBox").hidden = true;
   } else {
     $("tfMain").innerHTML = primaryText(D, L);
@@ -620,7 +649,7 @@ function compute(){
   lastOut = {from, to, fFib, tFib, v, ply,
     real:$("rReal").textContent, plyC:$("rPly").textContent, dens:$("rDens").textContent, weight:$("rWeight").textContent,
     soft:$("rSoftDia").textContent, hard:$("rHardDia").textContent,
-    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, plyRatio, plyLabel, plied, calcTxt};
+    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, plyRatio, plyLabel, plied, levelK, levelName, calcTxt};
 }
 
 function buildCopyText(){
@@ -643,6 +672,7 @@ function buildCopyText(){
     out.push(`⭐ ${o.plied ? L.sugTPly : L.sugT}: ${nf(o.r.tpm[1],0)} TPM (${nf(o.r.tpi[1],1)} T/in)`);
     out.push(`• ${L.range}: ${nf(o.r.tpm[0],0)}–${nf(o.r.tpm[2],0)} TPM (${nf(o.r.tpi[0],1)}–${nf(o.r.tpi[2],1)} T/in) · ${primaryPlain(o.r)}`);
     if (o.plyRatio) out.push(`• ${L.ratioLbl}: ${rTxt(o.plyRatio)}`);
+    if (o.levelK) out.push(`• ${L.levelLbl}: ${o.levelName} × ${o.levelK}`);
     out.push(`• ${L.eqL}: ${eqText(o.r)}`);
   } else out.push(`🌀 ${L.cTwist}: ${o.yName}`);
   if (o.calcTxt) out.push(`• ${L.cCalc}: ${o.calcTxt}`);
@@ -692,6 +722,8 @@ function saveCustom(){ try { localStorage.setItem("customTF", JSON.stringify({sy
 $("cusSys").addEventListener("change", () => { saveCustom(); compute(); });
 $("btnCopy").addEventListener("click", copyResults);
 $("cmbRatio").addEventListener("change", compute);
+$("cmbLevel").addEventListener("change", compute);
+$("levelCus").addEventListener("input", () => { try { localStorage.setItem("levelCus", $("levelCus").value); } catch(e){} compute(); });
 $("ratioCus").addEventListener("input", () => { try { localStorage.setItem("ratioCus", $("ratioCus").value); } catch(e){} compute(); });
 $("txtValue").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("txtPly").focus(); }});
 $("txtPly").addEventListener("blur", () => { if ($("txtPly").value.trim() === "" || num($("txtPly").value) === 0){ $("txtPly").value = "1"; compute(); }});
