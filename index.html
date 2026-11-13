@@ -71,7 +71,7 @@
   body.offline .off{display:block}
   [dir=ltr] .res .v,[dir=ltr] input{text-align:left}
   /* twist section */
-  #cmbYarn,#cusSys{direction:inherit;text-align:start;font-size:16px}
+  #cmbYarn,#cusSys,#cmbRatio{direction:inherit;text-align:start;font-size:16px}
   .tf{font-size:24px;font-weight:700;color:var(--brand);direction:ltr;text-align:left;margin:12px 0 2px}
   .tf small{font-size:14px;color:var(--muted);font-weight:600}
   .eq{font-size:13px;color:var(--muted);direction:ltr;text-align:left;margin-bottom:10px}
@@ -168,6 +168,11 @@
       <thead><tr><th></th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
       <tbody id="tBody"></tbody>
     </table>
+    <div id="ratioBox" hidden style="margin-top:12px">
+      <label for="cmbRatio" data-t="ratioLbl"></label>
+      <select id="cmbRatio"></select>
+      <div id="ratioCusBox" hidden style="margin-top:8px"><input id="ratioCus" inputmode="decimal" autocomplete="off" placeholder="0.70"></div>
+    </div>
     <div class="note" id="tNote"></div>
     <span class="ev" id="tEv" hidden></span>
   </section>
@@ -193,9 +198,11 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 /* What's new — shown once after the app updates. Add a line for every release. */
 const CHANGELOG = {
+  "1.3.1": { ar:"قائمة جديدة لنسبة برم التزوية: بتختار النسبة المقترحة لوحدها حسب نوع الغزل، وتقدر تختار نسبة تانية من المراجع أو تكتب نسبتك.",
+             en:"New ply-twist ratio list: picks the suggested ratio for the yarn type automatically; you can choose another referenced ratio or type your own." },
   "1.3.0": { ar:"قائمة جديدة لنوع الغزل والاستخدام، ومعامل البرم بيظهر بالنظام المتعارف عليه لكل نوع. نفس الخيط بيدي نفس البرم بأي نظام ترقيم. برم التزوية المقترح للخيوط المزوية. وزرار لنسخ النتائج.",
              en:"New yarn type / end-use list; twist factor shown in each industry's usual system. Same yarn gives the same twist in any count system. Suggested ply twist for plied yarns. New button to copy the results." },
   "1.2.0": { ar:"حسابات البرم بقت على النمرة النهائية لو الخيط مزوي، وعلى السنجل لو طرف واحد. وبقى التطبيق يبلّغك بأي تحديث جديد.",
@@ -211,7 +218,7 @@ const T = {
       rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم",yarnType:"نوع الغزل / الاستخدام",cusSys:"نظام المعامل",cusMin:"أقل معامل",cusMax:"أعلى معامل",custom:"مدى مخصص (أدخل القيم)",
       cusPrompt:"اكتب أقل وأعلى معامل",noRef:"مفيش مدى مرجعي لخامة {f} — اختار نوع من القائمة أو اكتب مدى مصنعك.",
       bSingle:"على النمرة السنجل: {c}",bSinglePly:"برم السنجل على {c} — والتزوية مقترحة لـ {r}",bPly:"على النمرة النهائية: {r} = {c}",
-      plyRow:"تزوية مقترحة (S)",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع.",
+      plyRow:"تزوية مقترحة (S)",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع — اختار نسبة من القائمة.",ratioLbl:"نسبة برم التزوية إلى برم السنجل",rAuto:"تلقائي حسب نوع الغزل",rAutoNone:"تلقائي — مفيش نسبة مرجعية لهذا النوع",rCustom:"نسبة أخرى (اكتبها)",plyFixed:"برم التزوية = {a} × برم السنجل ({src})، في الاتجاه العكسي: S على Z.",
       eqL:"المكافئ",avg:"متوسط",evS:"دليل قوي",evM:"دليل متوسط",evW:"دليل ضعيف – يحتاج تحقق بقياسات المصنع",evC:"مدى من إدخالك",
       guide:"المديات استرشادية من مراجع الغزل — يُفضّل مطابقتها بقياسات المصنع.",
       copyBtn:"📋 نسخ النتائج",copiedRes:"تم نسخ النتائج — الصقها في أي مكان",copyFail:"تعذّر النسخ",
@@ -232,7 +239,7 @@ const T = {
       rHardDia:"Hard twist diameter",twistTable:"Twist calculations",yarnType:"Yarn type / end use",cusSys:"Factor system",cusMin:"Min factor",cusMax:"Max factor",custom:"Custom range (enter values)",
       cusPrompt:"Enter min and max factor",noRef:"No reference range for {f} — pick a type from the list or enter your mill's range.",
       bSingle:"On single count: {c}",bSinglePly:"Singles twist on {c} — ply twist suggested for {r}",bPly:"On resultant count: {r} = {c}",
-      plyRow:"Ply twist, suggested (S)",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type.",
+      plyRow:"Ply twist, suggested (S)",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type — pick one from the list.",ratioLbl:"Ply-to-singles twist ratio",rAuto:"Auto for yarn type",rAutoNone:"Auto — no reference ratio for this type",rCustom:"Other ratio (type it)",plyFixed:"Ply twist = {a} × singles twist ({src}), opposite direction (S on Z).",
       eqL:"Equivalent",avg:"avg",evS:"Strong evidence",evM:"Medium evidence",evW:"Weak evidence – verify with mill measurements",evC:"Your own range",
       guide:"Ranges are guidance from spinning references — check them against your mill's measurements.",
       copyBtn:"📋 Copy results",copiedRes:"Results copied — paste them anywhere",copyFail:"Could not copy",
@@ -346,6 +353,18 @@ const YARNS = [
   {id:"custom",    ar:null, en:null,                                                                   ae:null,                  sys:"custom", basis:"single", ratio:null, ev:"C", src:""}
 ];
 const FIBER_DEFAULT = {Cotton:"cot_warp", Wool:"cpt_single", PolyProp:"pp_bcf", Jute:"jute"};
+/* referenced ply-to-singles twist ratios (see twist-factor-research.md) */
+const RATIOS = [
+  {id:"r50", r:[0.5,0.5],   ar:"خيط متوازن",                 en:"Balanced yarn",                 src:"Palaniswamy 2005"},
+  {id:"r54", r:[0.54,0.73], ar:"سجاد صوف عادي",              en:"Conventional wool carpet",      src:"Woolwise L21"},
+  {id:"r60", r:[0.6,0.6],   ar:"صوف تريكو",                  en:"Wool knitting",                 src:"Woolwise L19"},
+  {id:"r65", r:[0.65,0.65], ar:"قطن مفتوح (OE)",             en:"Cotton open-end",               src:"SITRA"},
+  {id:"r70", r:[0.7,0.7],   ar:"قطن حلقي (متوسط) / Axminster", en:"Cotton ring (average) / Axminster", src:"SITRA · Woolwise L21"},
+  {id:"r75", r:[0.75,0.75], ar:"أعلى مقاومة احتكاك",          en:"Best abrasion resistance",      src:"Palaniswamy 2006"},
+  {id:"r78", r:[0.78,0.78], ar:"بوليستر/قطن",                en:"Polyester/cotton",              src:"SITRA"},
+  {id:"r97", r:[0.97,0.97], ar:"بوليستر/فسكوز",              en:"Polyester/viscose",             src:"SITRA"}
+];
+const rTxt = r => r[0] === r[1] ? String(r[0]) : `${r[0]}–${r[1]}`;
 
 const nf = (n, d) => Number.isFinite(n) ? n.toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d}) : "—";
 function sysName(sys){ return sys === "m" ? "αm" : sys === "tex" ? "αtex" : "αe"; }
@@ -389,10 +408,20 @@ fill($("cmbFrom"), UNITS, 4); fill($("cmbTo"), UNITS, 3);
 fill($("cmbFromFiber"), FIBERS, 0); fill($("cmbToFiber"), FIBERS, 0);
 let tfMode = false;
 let yarnUserPicked = false;
+let lastYarnForRatio = null;
 function fillYarns(){
   const cur = $("cmbYarn").value;
   $("cmbYarn").innerHTML = YARNS.map(y => `<option value="${y.id}">${y.id === "custom" ? T[lang].custom : y[lang]}</option>`).join("");
   if (cur) $("cmbYarn").value = cur;
+}
+function fillRatios(y){
+  const L = T[lang], cur = $("cmbRatio").value;
+  const auto = y && y.ratio ? `${L.rAuto} (${rTxt(y.ratio)})` : L.rAutoNone;
+  $("cmbRatio").innerHTML = `<option value="auto">${auto}</option>` +
+    RATIOS.map(o => `<option value="${o.id}">${rTxt(o.r)} — ${o[lang]} (${o.src})</option>`).join("") +
+    `<option value="custom">${L.rCustom}</option>`;
+  $("cmbRatio").value = cur || "auto";
+  if (!$("cmbRatio").value) $("cmbRatio").value = "auto";
 }
 function autoYarn(){
   if (yarnUserPicked) return;
@@ -402,6 +431,7 @@ try {
   const c = JSON.parse(localStorage.getItem("customTF") || "null");
   if (c){ $("cusSys").value = c.sys || "e"; $("cusMin").value = c.min ?? ""; $("cusMax").value = c.max ?? ""; }
 } catch(e){}
+try { $("ratioCus").value = localStorage.getItem("ratioCus") || ""; } catch(e){}
 let lastOut = null;
 
 function num(s){
@@ -470,7 +500,12 @@ function compute(){
   const evCls = {S:"strong", M:"medium", W:"weak", C:"strong"}[y.ev];
   $("tEv").className = "ev " + evCls; $("tEv").textContent = {S:L.evS, M:L.evM, W:L.evW, C:L.evC}[y.ev]; $("tEv").hidden = false;
 
-  let plyTpm = null, notes = [];
+  let plyTpm = null, plyRatio = null, notes = [];
+  const showRatio = !!r && y.basis === "single" && ply > 1;
+  if (lastYarnForRatio !== y.id){ $("cmbRatio").value = "auto"; lastYarnForRatio = y.id; }
+  fillRatios(y);
+  $("ratioBox").hidden = !showRatio;
+  $("ratioCusBox").hidden = !(showRatio && $("cmbRatio").value === "custom");
   if (!r){
     $("tfMain").textContent = L.cusPrompt; $("tfEq").textContent = ""; $("tBody").innerHTML = "";
   } else {
@@ -478,11 +513,22 @@ function compute(){
     $("tfEq").textContent = `${L.eqL}: ${eqText(r)}`;
     const row = (lbl, a, d) => `<tr><td class="lbl">${lbl}</td>${a.map(x => `<td>${nf(x,d)}</td>`).join("")}</tr>`;
     let html = row("TPM", r.tpm, 0) + row("T/in", r.tpi, 1);
-    if (y.basis === "single" && ply > 1){
-      if (y.ratio){
-        plyTpm = [r.tpm[1]*y.ratio[0], r.tpm[1]*(y.ratio[0]+y.ratio[1])/2, r.tpm[1]*y.ratio[1]];
+    if (showRatio){
+      // ratio: auto = yarn type's referenced ratio, or a preset, or the user's own number
+      const sel = $("cmbRatio").value;
+      let rr = null, rsrc = "";
+      if (sel === "auto"){ rr = y.ratio; rsrc = y.src; }
+      else if (sel === "custom"){ const c = num($("ratioCus").value); if (c > 0) { rr = [c,c]; rsrc = L.rCustom; } }
+      else { const o = RATIOS.find(x => x.id === sel); rr = o.r; rsrc = o.src; }
+      if (rr){
+        plyTpm = rr[0] === rr[1] ? r.tpm.map(t => t * rr[0])                                  // fixed ratio: applied to min / avg / max
+                                 : [r.tpm[1]*rr[0], r.tpm[1]*(rr[0]+rr[1])/2, r.tpm[1]*rr[1]];  // ratio range: applied to the average
+        plyRatio = rr;
         html += `<tr><td class="lbl soft">${L.plyRow}<br><small>TPM</small></td>${plyTpm.map(x => `<td class="soft">${nf(x,0)}</td>`).join("")}</tr>`;
-        notes.push(L.plyNote.replace("{a}–{b}", "\u2066" + y.ratio[0] + "–" + y.ratio[1] + "\u2069"));
+        html += `<tr><td class="lbl soft"><small>T/in</small></td>${plyTpm.map(x => `<td class="soft">${nf(x/39.37,1)}</td>`).join("")}</tr>`;
+        notes.push(rr[0] === rr[1]
+          ? L.plyFixed.replace("{a}", "\u2066" + rr[0] + "\u2069").replace("{src}", "\u2066" + rsrc + "\u2069")
+          : L.plyNote.replace("{a}–{b}", "\u2066" + rTxt(rr) + "\u2069"));
       } else notes.push(L.plyNone);
     }
     $("tBody").innerHTML = html;
@@ -515,7 +561,7 @@ function compute(){
   lastOut = {from, to, fFib, tFib, v, ply,
     real:$("rReal").textContent, plyC:$("rPly").textContent, dens:$("rDens").textContent, weight:$("rWeight").textContent,
     soft:$("rSoftDia").textContent, hard:$("rHardDia").textContent,
-    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, ratio:y.ratio, calcTxt};
+    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, plyRatio, calcTxt};
 }
 
 function buildCopyText(){
@@ -536,7 +582,7 @@ function buildCopyText(){
     out.push(`🌀 ${L.cTwist}: ${o.yName} (${primaryPlain(o.r)})`);
     out.push(`• ${o.basisTxt}`);
     out.push(`• TPM: ${nf(o.r.tpm[0],0)} / ${nf(o.r.tpm[1],0)} / ${nf(o.r.tpm[2],0)}  (T/in ${nf(o.r.tpi[0],1)} / ${nf(o.r.tpi[1],1)} / ${nf(o.r.tpi[2],1)})`);
-    if (o.plyTpm) out.push(`• ${L.plyRow}: ${nf(o.plyTpm[0],0)}–${nf(o.plyTpm[2],0)} TPM`);
+    if (o.plyTpm) out.push(`• ${L.plyRow} ×${rTxt(o.plyRatio)}: ${nf(o.plyTpm[0],0)} / ${nf(o.plyTpm[1],0)} / ${nf(o.plyTpm[2],0)} TPM`);
     out.push(`• ${L.eqL}: ${eqText(o.r)}`);
   } else out.push(`🌀 ${L.cTwist}: ${o.yName}`);
   if (o.calcTxt) out.push(`• ${L.cCalc}: ${o.calcTxt}`);
@@ -585,6 +631,8 @@ function saveCustom(){ try { localStorage.setItem("customTF", JSON.stringify({sy
 ["cusMin","cusMax"].forEach(id => $(id).addEventListener("input", () => { saveCustom(); compute(); }));
 $("cusSys").addEventListener("change", () => { saveCustom(); compute(); });
 $("btnCopy").addEventListener("click", copyResults);
+$("cmbRatio").addEventListener("change", compute);
+$("ratioCus").addEventListener("input", () => { try { localStorage.setItem("ratioCus", $("ratioCus").value); } catch(e){} compute(); });
 $("txtValue").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("txtPly").focus(); }});
 $("txtPly").addEventListener("blur", () => { if ($("txtPly").value.trim() === "" || num($("txtPly").value) === 0){ $("txtPly").value = "1"; compute(); }});
 $("modeTf").addEventListener("click", () => setMode(true));
