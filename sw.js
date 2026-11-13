@@ -1,5 +1,5 @@
 // Bump CACHE when any file changes so phones pick up the new version.
-const CACHE = "count-converter-v1.3.1";
+const CACHE = "count-converter-v1.3.2";
 const FILES = [
   "./",
   "index.html",
