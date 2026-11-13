@@ -79,6 +79,13 @@
   .ev.strong{background:#e3f4e5;color:#1e6b2a} .ev.medium{background:#fff1d6;color:#7a5200} .ev.weak{background:#fde4dc;color:#9a2f12}
   #cmbRatio:disabled{opacity:.55}
   #tTitle,#tNote{direction:inherit;text-align:start}
+  .sugBox{background:linear-gradient(135deg,var(--brand),#2d6aa3);color:#fff;border-radius:14px;padding:14px 16px;margin:12px 0}
+  .sugBox .t{font-size:13px;opacity:.9;font-weight:600}
+  .sugBox .n{font-size:38px;font-weight:800;line-height:1.1;direction:ltr;text-align:start;margin:4px 0}
+  .sugBox .n small{font-size:18px;font-weight:700;opacity:.9}
+  .sugBox .s{font-size:14px;direction:inherit;text-align:start;opacity:.95}
+  .sugBox .s b{color:#ffd27a}
+  td.avgc{font-weight:800;color:var(--brand)}
   .warn2{background:#fff4d6;color:#6b4e00;border-radius:10px;padding:8px 10px;font-size:13px;margin-top:10px}
   .btn.copy{width:100%;background:var(--brand);color:#fff;font-size:16px;padding:14px;margin-bottom:12px}
   /* install helper */
@@ -165,6 +172,7 @@
     <div class="tf" id="tfMain">—</div>
     <div class="eq" id="tfEq"></div>
     <div class="head" id="tTitle">—</div>
+    <div class="sugBox" id="sugBox" hidden></div>
     <table>
       <thead><tr><th></th><th>Min</th><th>Avg</th><th>Max</th></tr></thead>
       <tbody id="tBody"></tbody>
@@ -200,9 +208,11 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.3.2";
+const APP_VERSION = "1.3.3";
 /* What's new — shown once after the app updates. Add a line for every release. */
 const CHANGELOG = {
+  "1.3.3": { ar:"عرض أوضح للبرم: الخيط السنجل بيتعرض برمه السنجل، والمزوي بيتعرض برم التزوية بس. والبرم المقترح بقى في مربع مميز فوق الجدول.",
+             en:"Clearer twist display: a single yarn shows its singles twist, a plied yarn shows only its ply twist. The suggested twist now sits in a highlighted box above the table." },
   "1.3.2": { ar:"قائمة نسبة التزوية بقت ظاهرة دايماً وشغالة لكل الخامات والسجاد (BCF وتزوية الصوف بتحسب برم السنجل المقترح). ضفنا نسب للفريزيه والساكسوني والبرم الشديد، واقتراحات للخامات اللي ملهاش مرجع.",
              en:"The ply-ratio list is now always visible and works for all fibers and carpet yarns (BCF and wool folding show the suggested singles twist). Added frisé, saxony and hard-twist ratios, plus suggestions for fibers without references." },
   "1.3.1": { ar:"قائمة جديدة لنسبة برم التزوية: بتختار النسبة المقترحة لوحدها حسب نوع الغزل، وتقدر تختار نسبة تانية من المراجع أو تكتب نسبتك.",
@@ -222,7 +232,7 @@ const T = {
       rHardDia:"القطر – برم شديد (Hard)",twistTable:"حسابات البرم",yarnType:"نوع الغزل / الاستخدام",cusSys:"نظام المعامل",cusMin:"أقل معامل",cusMax:"أعلى معامل",custom:"مدى مخصص (أدخل القيم)",
       cusPrompt:"اكتب أقل وأعلى معامل",noRef:"مفيش مدى مرجعي لخامة {f} — اختار نوع من القائمة أو اكتب مدى مصنعك.",
       bSingle:"على النمرة السنجل: {c}",bSinglePly:"برم السنجل على {c} — والتزوية مقترحة لـ {r}",bPly:"على النمرة النهائية: {r} = {c}",
-      plyRow:"تزوية مقترحة (S)",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع — اختار نسبة من القائمة.",ratioLbl:"نسبة برم التزوية إلى برم السنجل",rAuto:"تلقائي",rAutoNone:"تلقائي — مفيش نسبة لهذا النوع",grpRef:"نسب من المراجع",grpSug:"اقتراحات (بدون مرجع موثّق)",sugTag:"اقتراح",hintPly1:"اكتب Ply = 2 أو أكتر عشان تتحسب التزوية.",hintNoTwist:"اختار نوع غزل أو اكتب مدى الأول.",singRow:"سنجل مقترح (Z)",singFixed:"برم السنجل = برم التزوية ÷ {a} ({src})، في الاتجاه العكسي: Z تحت S.",singRange:"برم السنجل = برم التزوية ÷ {a}، في الاتجاه العكسي: Z تحت S.",sugWarn:"⚠️ النسبة دي اقتراح هندسي بدون مرجع موثّق — جرّبها وطابقها بقياسات المصنع.",rCustom:"نسبة أخرى (اكتبها)",plyFixed:"برم التزوية = {a} × برم السنجل ({src})، في الاتجاه العكسي: S على Z.",
+      plyRow:"تزوية مقترحة (S)",tSing:"برم الخيط السنجل: {c}",tPlyd:"برم الخيط المزوي: {r} (النمرة النهائية {c})",tAsIs:"برم الخيط: {c}",sugT:"البرم المقترح",sugTPly:"برم التزوية المقترح (S)",range:"المدى",fromRef:"برم التزوية محسوب من المرجع مباشرة على النمرة النهائية.",byRatio:"برم التزوية محسوب بنسبة {a} ({src}).",pickRatio:"اختار نسبة التزوية من القائمة عشان يتحسب برم المزوي.",plyNote:"برم التزوية = {a}–{b} من برم السنجل، في الاتجاه العكسي: S على Z.",plyNone:"مفيش نسبة تزوية مرجعية لهذا النوع — اختار نسبة من القائمة.",ratioLbl:"نسبة برم التزوية",rAuto:"تلقائي",rAutoNone:"تلقائي — مفيش نسبة لهذا النوع",grpRef:"نسب من المراجع",grpSug:"اقتراحات (بدون مرجع موثّق)",sugTag:"اقتراح",hintPly1:"اكتب Ply = 2 أو أكتر عشان تتحسب التزوية.",hintNoTwist:"اختار نوع غزل أو اكتب مدى الأول.",singRow:"سنجل مقترح (Z)",singFixed:"برم السنجل = برم التزوية ÷ {a} ({src})، في الاتجاه العكسي: Z تحت S.",singRange:"برم السنجل = برم التزوية ÷ {a}، في الاتجاه العكسي: Z تحت S.",sugWarn:"⚠️ النسبة دي اقتراح هندسي بدون مرجع موثّق — جرّبها وطابقها بقياسات المصنع.",rCustom:"نسبة أخرى (اكتبها)",plyFixed:"برم التزوية = {a} × برم السنجل ({src})، في الاتجاه العكسي: S على Z.",
       eqL:"المكافئ",avg:"متوسط",evS:"دليل قوي",evM:"دليل متوسط",evW:"دليل ضعيف – يحتاج تحقق بقياسات المصنع",evC:"مدى من إدخالك",
       guide:"المديات استرشادية من مراجع الغزل — يُفضّل مطابقتها بقياسات المصنع.",
       copyBtn:"📋 نسخ النتائج",copiedRes:"تم نسخ النتائج — الصقها في أي مكان",copyFail:"تعذّر النسخ",
@@ -243,7 +253,7 @@ const T = {
       rHardDia:"Hard twist diameter",twistTable:"Twist calculations",yarnType:"Yarn type / end use",cusSys:"Factor system",cusMin:"Min factor",cusMax:"Max factor",custom:"Custom range (enter values)",
       cusPrompt:"Enter min and max factor",noRef:"No reference range for {f} — pick a type from the list or enter your mill's range.",
       bSingle:"On single count: {c}",bSinglePly:"Singles twist on {c} — ply twist suggested for {r}",bPly:"On resultant count: {r} = {c}",
-      plyRow:"Ply twist, suggested (S)",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type — pick one from the list.",ratioLbl:"Ply-to-singles twist ratio",rAuto:"Auto",rAutoNone:"Auto — no ratio for this type",grpRef:"Referenced ratios",grpSug:"Suggestions (no documented source)",sugTag:"suggestion",hintPly1:"Enter Ply = 2 or more to calculate ply twist.",hintNoTwist:"Pick a yarn type or enter a range first.",singRow:"Singles, suggested (Z)",singFixed:"Singles twist = ply twist ÷ {a} ({src}), opposite direction: Z under S.",singRange:"Singles twist = ply twist ÷ {a}, opposite direction: Z under S.",sugWarn:"⚠️ This ratio is an engineering suggestion with no documented source — trial it and check against mill measurements.",rCustom:"Other ratio (type it)",plyFixed:"Ply twist = {a} × singles twist ({src}), opposite direction (S on Z).",
+      plyRow:"Ply twist, suggested (S)",tSing:"Single yarn twist: {c}",tPlyd:"Plied yarn twist: {r} (resultant {c})",tAsIs:"Yarn twist: {c}",sugT:"Suggested twist",sugTPly:"Suggested ply twist (S)",range:"range",fromRef:"Ply twist taken directly from the reference on the resultant count.",byRatio:"Ply twist calculated with ratio {a} ({src}).",pickRatio:"Pick a ply twist ratio from the list to calculate the plied twist.",plyNote:"Ply twist = {a}–{b} of singles twist, opposite direction (S on Z).",plyNone:"No reference ply ratio for this type — pick one from the list.",ratioLbl:"Ply twist ratio",rAuto:"Auto",rAutoNone:"Auto — no ratio for this type",grpRef:"Referenced ratios",grpSug:"Suggestions (no documented source)",sugTag:"suggestion",hintPly1:"Enter Ply = 2 or more to calculate ply twist.",hintNoTwist:"Pick a yarn type or enter a range first.",singRow:"Singles, suggested (Z)",singFixed:"Singles twist = ply twist ÷ {a} ({src}), opposite direction: Z under S.",singRange:"Singles twist = ply twist ÷ {a}, opposite direction: Z under S.",sugWarn:"⚠️ This ratio is an engineering suggestion with no documented source — trial it and check against mill measurements.",rCustom:"Other ratio (type it)",plyFixed:"Ply twist = {a} × singles twist ({src}), opposite direction (S on Z).",
       eqL:"Equivalent",avg:"avg",evS:"Strong evidence",evM:"Medium evidence",evW:"Weak evidence – verify with mill measurements",evC:"Your own range",
       guide:"Ranges are guidance from spinning references — check them against your mill's measurements.",
       copyBtn:"📋 Copy results",copiedRes:"Results copied — paste them anywhere",copyFail:"Could not copy",
@@ -478,7 +488,7 @@ function clearOut(){
   ["rReal","rPly","rDens","rWeight","rSoftDia","rHardDia","twistRes"].forEach(id => $(id).textContent = "—");
   $("rTitle").textContent = "—"; $("tTitle").textContent = "—"; $("tNote").textContent = "";
   $("tfMain").textContent = "—"; $("tfEq").textContent = ""; $("tBody").innerHTML = ""; $("twistEq").textContent = "";
-  $("tEv").hidden = true; lastOut = null;
+  $("tEv").hidden = true; $("sugBox").hidden = true; lastOut = null;
 }
 
 function compute(){
@@ -517,73 +527,77 @@ function compute(){
   $("rSoftDia").textContent = `${fmt(round(dia/pf[0],4))} mm`;
   $("rHardDia").textContent = `${fmt(round(dia/pf[1],4))} mm`;
 
-  /* ---- twist ---- */
+  /* ---- twist: show the twist of what the user entered ----
+     ply = 1 -> singles twist ; ply > 1 -> ply twist only (from the reference for ply-basis types, or singles × ratio otherwise) */
   const custom = {sys:$("cusSys").value, min:num($("cusMin").value), max:num($("cusMax").value)};
-  const basisTex = y.basis === "ply" ? texTotal : texSingle;
-  const r = twistForType(y, basisTex, custom);
+  const plied = ply > 1;
+  const showTex = plied || y.basis === "ply" ? texTotal : texSingle;     // count the shown twist belongs to
+  const iso = t => "\u2066" + t + "\u2069";
   const cSingle = `${fmt(v)}/1 ${from}`, cRes = `${fmt(v)}/${ply} ${from}`;
   const cResEq  = `${fmt(round(convertFromTex(texTotal, from),2))}/1 ${from}`;
-  let basisTxt;
-  if (y.basis === "ply") basisTxt = ply > 1 ? L.bPly.replace("{r}", cRes).replace("{c}", cResEq) : L.bSingle.replace("{c}", cSingle);
-  else basisTxt = ply > 1 ? L.bSinglePly.replace("{c}", cSingle).replace("{r}", cRes) : L.bSingle.replace("{c}", cSingle);
-  const iso = t => "\u2066" + t + "\u2069";   // keep counts like "20/1 Ne" intact inside Arabic text
-  $("tTitle").textContent = (y.basis === "ply"
-    ? (ply > 1 ? L.bPly.replace("{r}", iso(cRes)).replace("{c}", iso(cResEq)) : L.bSingle.replace("{c}", iso(cSingle)))
-    : (ply > 1 ? L.bSinglePly.replace("{c}", iso(cSingle)).replace("{r}", iso(cRes)) : L.bSingle.replace("{c}", iso(cSingle))));
+  let titleT, titleP;
+  if (plied){ titleT = L.tPlyd.replace("{r}", iso(cRes)).replace("{c}", iso(cResEq)); titleP = L.tPlyd.replace("{r}", cRes).replace("{c}", cResEq); }
+  else if (y.basis === "ply"){ titleT = L.tAsIs.replace("{c}", iso(cSingle)); titleP = L.tAsIs.replace("{c}", cSingle); }
+  else { titleT = L.tSing.replace("{c}", iso(cSingle)); titleP = L.tSing.replace("{c}", cSingle); }
+  $("tTitle").textContent = titleT;
+  const basisTxt = titleP;
 
   const evCls = {S:"strong", M:"medium", W:"weak", C:"strong"}[y.ev];
   $("tEv").className = "ev " + evCls; $("tEv").textContent = {S:L.evS, M:L.evM, W:L.evW, C:L.evC}[y.ev]; $("tEv").hidden = false;
 
-  let plyTpm = null, plyRatio = null, plyLabel = "", notes = [];
-  const showRatio = !!r && ply > 1;
+  const notes = [];
+  const needRatio = plied && y.basis === "single";
   const ratioKey = y.id + "|" + fFib;
   if (lastYarnForRatio !== ratioKey){ $("cmbRatio").value = "auto"; lastYarnForRatio = ratioKey; }
   fillRatios(y, fFib);
-  $("cmbRatio").disabled = !showRatio;
-  $("ratioCusBox").hidden = !(showRatio && $("cmbRatio").value === "custom");
-  $("ratioHint").textContent = !r ? L.hintNoTwist : (ply > 1 ? "" : L.hintPly1);
-  if (!r){
-    $("tfMain").textContent = L.cusPrompt; $("tfEq").textContent = ""; $("tBody").innerHTML = "";
+  $("ratioBox").hidden = !needRatio;
+  $("cmbRatio").disabled = false;
+  $("ratioCusBox").hidden = !(needRatio && $("cmbRatio").value === "custom");
+  $("ratioHint").textContent = "";
+
+  let D = null, plyRatio = null;                 // D = the twist that is displayed
+  if (y.basis === "ply"){
+    D = twistForType(y, showTex, custom);
+    if (D && plied) notes.push(L.fromRef);
   } else {
-    $("tfMain").innerHTML = primaryText(r, L);
-    $("tfEq").textContent = `${L.eqL}: ${eqText(r)}`;
-    const row = (lbl, a, d) => `<tr><td class="lbl">${lbl}</td>${a.map(x => `<td>${nf(x,d)}</td>`).join("")}</tr>`;
-    let html = row("TPM", r.tpm, 0) + row("T/in", r.tpi, 1);
-    if (showRatio){
-      // ratio = ply twist ÷ singles twist. auto = per yarn type (or per fiber for "custom"), a preset, or the user's own number
+    const rs = twistForType(y, texSingle, custom);
+    if (rs && !plied) D = rs;
+    else if (rs){
       const sel = $("cmbRatio").value;
       let rr = null, rsrc = "", rkind = "ref";
       if (sel === "auto"){ const a = autoRatio(y, fFib); if (a){ rr = a.r; rsrc = a.kind === "sug" ? L.sugTag : a.src; rkind = a.kind; } }
-      else if (sel === "custom"){ const c = num($("ratioCus").value); if (c > 0) { rr = [c,c]; rsrc = L.rCustom; rkind = "own"; } }
+      else if (sel === "custom"){ const c = num($("ratioCus").value); if (c > 0){ rr = [c,c]; rsrc = L.rCustom; rkind = "own"; } }
       else { const o = RATIOS.find(x => x.id === sel); rr = o.r; rsrc = o.kind === "sug" ? L.sugTag : o.src; rkind = o.kind; }
       if (rr){
-        const fixed = rr[0] === rr[1];
-        const isoN = t => "\u2066" + t + "\u2069";
-        if (y.basis === "single"){
-          // singles twist known -> suggested ply twist = singles × ratio
-          plyTpm = fixed ? r.tpm.map(t => t * rr[0]) : [r.tpm[1]*rr[0], r.tpm[1]*(rr[0]+rr[1])/2, r.tpm[1]*rr[1]];
-          plyLabel = L.plyRow;
-          notes.push(fixed ? L.plyFixed.replace("{a}", isoN(rr[0])).replace("{src}", isoN(rsrc)) : L.plyNote.replace("{a}–{b}", isoN(rTxt(rr))));
-        } else {
-          // ply (resultant) twist known -> suggested singles twist = ply ÷ ratio
-          plyTpm = fixed ? r.tpm.map(t => t / rr[0]) : [r.tpm[1]/rr[1], r.tpm[1]/((rr[0]+rr[1])/2), r.tpm[1]/rr[0]];
-          plyLabel = L.singRow;
-          notes.push(fixed ? L.singFixed.replace("{a}", isoN(rr[0])).replace("{src}", isoN(rsrc)) : L.singRange.replace("{a}", isoN(rTxt(rr))));
-        }
+        const tpm = rr[0] === rr[1] ? rs.tpm.map(t => t * rr[0]) : [rs.tpm[1]*rr[0], rs.tpm[1]*(rr[0]+rr[1])/2, rs.tpm[1]*rr[1]];
+        D = {tpm, tpi: tpm.map(t => t / 39.37), ae: tpm.map(t => aeFromTpm(t, texTotal)), sys: rs.sys};   // factor on the resultant count
         plyRatio = rr;
-        html += `<tr><td class="lbl soft">${plyLabel}<br><small>TPM</small></td>${plyTpm.map(x => `<td class="soft">${nf(x,0)}</td>`).join("")}</tr>`;
-        html += `<tr><td class="lbl soft"><small>T/in</small></td>${plyTpm.map(x => `<td class="soft">${nf(x/39.37,1)}</td>`).join("")}</tr>`;
+        notes.push(L.byRatio.replace("{a}", iso(rTxt(rr))).replace("{src}", iso(rsrc)));
         if (rkind === "sug") $("ratioHint").textContent = L.sugWarn;
-      } else notes.push(L.plyNone);
+      } else $("ratioHint").textContent = L.pickRatio;
     }
-    $("tBody").innerHTML = html;
+  }
+
+  if (!D){
+    $("tfMain").textContent = (y.id === "custom" && !twistForType(y, texSingle, custom)) ? L.cusPrompt : "—";
+    $("tfEq").textContent = ""; $("tBody").innerHTML = ""; $("sugBox").hidden = true;
+  } else {
+    $("tfMain").innerHTML = primaryText(D, L);
+    $("tfEq").textContent = `${L.eqL}: ${eqText(D)}`;
+    $("sugBox").hidden = false;
+    $("sugBox").innerHTML = `<div class="t">${plied ? L.sugTPly : L.sugT}</div>
+      <div class="n">${nf(D.tpm[1],0)} <small>TPM</small> · ${nf(D.tpi[1],1)} <small>T/in</small></div>
+      <div class="s">${L.range}: <bdi dir="ltr"><b>${nf(D.tpm[0],0)} – ${nf(D.tpm[2],0)}</b> TPM · ${nf(D.tpi[0],1)} – ${nf(D.tpi[2],1)} T/in</bdi></div>`;
+    const row = (lbl, a, d) => `<tr><td class="lbl">${lbl}</td>${a.map((x,i) => `<td${i === 1 ? ' class="avgc"' : ""}>${nf(x,d)}</td>`).join("")}</tr>`;
+    $("tBody").innerHTML = row("TPM", D.tpm, 0) + row("T/in", D.tpi, 1);
   }
   if (y.src) notes.push("📚 \u2066" + y.src + "\u2069");
   notes.push(L.guide);
   $("tNote").textContent = notes.join("  ·  ");
+  const r = D, plyTpm = null, plyLabel = "";
 
-  /* ---- calculator ---- */
-  const cSys = r ? (r.sys === "tpi" || r.sys === "jute" ? "tex" : r.sys) : (y.id === "custom" ? custom.sys : "e");
+  /* ---- calculator: same count as the shown twist ---- */
+  const cSys = D ? (D.sys === "tpi" || D.sys === "jute" ? "tex" : D.sys) : (y.id === "custom" ? custom.sys : "e");
   const nm = sysName(cSys);
   $("lblTwist").textContent    = tfMode ? `Enter ${nm} =` : "Enter TPM =";
   $("lblTwistRes").textContent = tfMode ? "Result TPM =" : `Result ${nm} =`;
@@ -592,12 +606,12 @@ function compute(){
   $("twistEq").textContent = "";
   if (!Number.isFinite(tw) || tw === 0){ $("twistRes").textContent = "—"; }
   else if (tfMode){
-    const tpm = tpmFromAe(sysToAe(tw, cSys), basisTex);
+    const tpm = tpmFromAe(sysToAe(tw, cSys), showTex);
     $("twistRes").textContent = `${nf(tpm,0)} TPM`;
     $("twistEq").textContent = `${nf(tpm/39.37,1)} T/in`;
     calcTxt = `${nm} ${fmt(tw)} → ${nf(tpm,0)} TPM (${nf(tpm/39.37,1)} T/in)`;
   } else {
-    const ae = aeFromTpm(tw, basisTex);
+    const ae = aeFromTpm(tw, showTex);
     $("twistRes").textContent = `${nm} ${nf(aeToSys(ae, cSys), sysDec(cSys))}`;
     $("twistEq").textContent = `αe ${nf(ae,2)} · αm ${nf(ae*AE_M,1)} · αtex ${nf(ae*AE_TEX,0)}`;
     calcTxt = `${fmt(tw)} TPM → αe ${nf(ae,2)} · αm ${nf(ae*AE_M,1)} · αtex ${nf(ae*AE_TEX,0)}`;
@@ -606,7 +620,7 @@ function compute(){
   lastOut = {from, to, fFib, tFib, v, ply,
     real:$("rReal").textContent, plyC:$("rPly").textContent, dens:$("rDens").textContent, weight:$("rWeight").textContent,
     soft:$("rSoftDia").textContent, hard:$("rHardDia").textContent,
-    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, plyRatio, plyLabel, calcTxt};
+    yName: y.id === "custom" ? T[lang].custom : y[lang], basisTxt, r, plyTpm, plyRatio, plyLabel, plied, calcTxt};
 }
 
 function buildCopyText(){
@@ -624,10 +638,11 @@ function buildCopyText(){
     `• ${L.rSoftDia}: ${o.soft}`,
     `• ${L.rHardDia}: ${o.hard}`, ""];
   if (o.r){
-    out.push(`🌀 ${L.cTwist}: ${o.yName} (${primaryPlain(o.r)})`);
+    out.push(`🌀 ${L.cTwist}: ${o.yName}`);
     out.push(`• ${o.basisTxt}`);
-    out.push(`• TPM: ${nf(o.r.tpm[0],0)} / ${nf(o.r.tpm[1],0)} / ${nf(o.r.tpm[2],0)}  (T/in ${nf(o.r.tpi[0],1)} / ${nf(o.r.tpi[1],1)} / ${nf(o.r.tpi[2],1)})`);
-    if (o.plyTpm) out.push(`• ${o.plyLabel} (${rTxt(o.plyRatio)}): ${nf(o.plyTpm[0],0)} / ${nf(o.plyTpm[1],0)} / ${nf(o.plyTpm[2],0)} TPM`);
+    out.push(`⭐ ${o.plied ? L.sugTPly : L.sugT}: ${nf(o.r.tpm[1],0)} TPM (${nf(o.r.tpi[1],1)} T/in)`);
+    out.push(`• ${L.range}: ${nf(o.r.tpm[0],0)}–${nf(o.r.tpm[2],0)} TPM (${nf(o.r.tpi[0],1)}–${nf(o.r.tpi[2],1)} T/in) · ${primaryPlain(o.r)}`);
+    if (o.plyRatio) out.push(`• ${L.ratioLbl}: ${rTxt(o.plyRatio)}`);
     out.push(`• ${L.eqL}: ${eqText(o.r)}`);
   } else out.push(`🌀 ${L.cTwist}: ${o.yName}`);
   if (o.calcTxt) out.push(`• ${L.cCalc}: ${o.calcTxt}`);
